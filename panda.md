@@ -75,8 +75,28 @@ print(df.to_string()) # to_string() if you wanna print non-truncated table
 
 # Selection of Column
 print(df["Height"].to_string()) # select single column
-print(df[["Name", "Height", "Weight"]]) # pass multiple columns as list
+print(df[["Height", "Weight"]]) # pass multiple columns as list
 
 #Selection By Row
-print(df.loc["pikachu"]) # We can refer by Name since we set it as the Index of the DF
+print(df.loc["Pikachu"]) # refer by Name allowed since we set it as the Index of the DF
+print(df.loc["Charizard", ["Height", "Weight"]]) # selective columns
+print(df.loc["Charizard": "Blastoise", ["Height", "Weight"]]) # slice syntax
+print(df.iloc[0:11:2, 0:3]) # index-based slice lookup on first 10 with step of 2 and only first 3 cols
+```
+
+## Filering
+
+Analogous to WHERE in SQL. Keeping rows based on predicate logic yielding true
+
+```python
+import pandas as pd
+
+df = pd.read_csv('pokemons.csv')
+
+tall_pokemons = df[df["Height"] > 2]
+legendary_pokemons = df[df["Legendary"] == True]
+water_pokemons = df[(df["Type1"] == "Water") | (df["Type2"] == "Water")]
+
+print(water_pokemons)
+
 ```
