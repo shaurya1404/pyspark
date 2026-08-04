@@ -60,3 +60,23 @@ new_rows = pd.DataFrame([ # Defining DF row-wise
 df = pd.concat([df, new_rows])
 print(df, '\n')
 ```
+
+## Import and Selection
+
+Importing and handling CSV and JSON files
+
+```python
+import pandas as pd
+
+df = pd.read_csv("pokemons.csv", index_col="Name") # automatically reads and loads CSV as a DataFrame. opt param allows choosing index
+# df_json = pd.read_json("data.json")
+
+print(df.to_string()) # to_string() if you wanna print non-truncated table
+
+# Selection of Column
+print(df["Height"].to_string()) # select single column
+print(df[["Name", "Height", "Weight"]]) # pass multiple columns as list
+
+#Selection By Row
+print(df.loc["pikachu"]) # We can refer by Name since we set it as the Index of the DF
+```
