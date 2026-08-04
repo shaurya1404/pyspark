@@ -8,7 +8,7 @@
 
 - Now, the trivial solution is to vertically scale - improve the resources of the single-system. However, this isn't scalable nor cost-effective as that too will hit a limit aftter a certain point and would also lead to wasted resources when data scales down to use lesser sizes.
 
-- Hence, the more optial solution is Horizontal Scaling - Use 20 not-so-fancy systems in order to process the data by partitioning it into subsets of data. This is exaclty what Spark does.
+- Hence, the more optimal solution is Horizontal Scaling - Use 20 not-so-fancy systems in order to process the data by partitioning it into subsets of data. This is exaclty what Spark does.
 
 - Spark is a distributed compute engine which allows processing of big data in a much more manageable and scalable manner. It processes data across multiple machines. It does NOT store data at any point; It's stateless. You point it at files sitting in S3 or a Delta/Iceberg table, it reads them, computes, writes results back out, and forgets everything.
 
@@ -22,7 +22,7 @@ There are essentially three 'roles' that are running in a Spark application:
 
 1) Driver: It schedules the work. It holds the SparkSession, builds the execution plan, and runs the complete Python script. It exists because you started a job, and it dies when that job finishes.
 
-2) Cluster Manager: It shchedules the infrastructure. It is a machine that was running even before the job was created and will continue to run after it's been completed. It has no idea was Spark is. It's a landlord with a pool of machines a portion of which it provides to the Driver based on how much it needs and whether it has the permission to access them.
+2) Cluster Manager: It schedule the infrastructure. It is a machine that was running even before the job was created and will continue to run after it's been completed. It has no idea what Spark is. It's a landlord with a pool of machines a portion of which it provides to the Driver based on how much it needs and whether it has the permission to access them.
 
 3) Executors: The individual worker nodes that are spun up by the Clsuter Manager and given to the Driver to delegate tasks to. The Driver is the Orchestrator. The executor nodes are the ones that actually perform the tasks.
 
