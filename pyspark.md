@@ -39,3 +39,76 @@ There are essentially three 'roles' that are running in a Spark application:
 Operations in Spark can be split into two types: 1. Transformations (select, filter, join, groupBy, withColumn) are LAZY. None of these are executed immediately when they're read. They are all added in the Logical Plan. 2. Actions (show, count, collect, write, take) are EAGER. They force the entire Logtical Plan made up until their line of call to execute.
 
 Spark's Lazy architecture is a feature, not a bug; it allows Spark to create an optimised logical plan of all the Transformations and executes them as effectively as possible only when the script calls an Action. The logical plan allows ther Optimizer to look at the entire pipeline collectively and rewrite it before running any of it.
+
+## DataFrame Reader API
+
+`spark.read` gives access to the DataFrameReader - a configurable object whose purpose is to turn external files into a DataFrame
+
+spark.read.format('csv').option('header', True).option('inferSchema', True).load(path)
+#     └──────┬────────┘ └──────────────────────┬──────────────────────────┘ └───┬───┘
+#      get the reader                   configure the reader                execute
+
+1) `.format(str)` - The data source: csv, json, parquet, delta, text. Defaults to `parquet` if not mentioned.
+
+2) `.option(key, value)` - Configure the reader object by accessing its properties
+
+3) `.schema(structType)` - Supply the column names and data types instead of letting Spark infer them
+
+4) `.load(path)` — Execute. Returns the DataFrame.
+
+***Note***: options belong to a format, and the reader silently ignores any that don't apply. `header` and `inferSchema` are CSV options; passing them to a JSON file format read does nothing but also raises no error. Same for a typo'd key.
+
+- `df.display()` is a Databricks function, not PySpark. It displays the DataFrame as a sorted grid. 
+- `df.show(n, truncate=False)` is a PySpark function, which prints ASCII. 
+- n (optional): No. of rows to show - default = 20; truncate (optional): Truncate strings longer than 20 chars. Default = False
+
+## DDL and StructType
+
+1) DDL
+
+DDL can be used to define the Schema explicitly instead of letting Spark infer via the inferSchema option od the DataFrameReader.
+The following structType definition (similar to SQL queries) can be passed into `.schema(structType)` to define the Schema of a DF via DDL
+
+```python
+my_ddl_schema = '''
+    item_identifier STRING,
+    item_weight STRING,
+    item_fat_content STRING,
+    item_visibility DOUBLE,
+    item_type STRING,
+    item_mrp DOUBLE,
+    outlet_identifier STRING,
+    outlet_establishment_year INTEGER,
+    outlet_size STRING,
+    outlet_location_type STRING,
+    outlet_type STRING,
+    item_outlet_sales DOUBLE
+'''
+```
+
+- `df.printSchema()` displays the schema of a PySpark DataFrame. It lists every column name, its data type, and whether it allows null values.
+
+2) StructType() Schema
+
+StructType is the second way of defining the Schema of your DataFrame.
+
+- `StructField` - Defines a single columns: a name, a datatype, and whether NULLs are allowed
+- `StructType` - An ordered list of StructFields (columns).
+
+```python
+from pyspark.sql.types import *
+
+my_struct_schema = StructType([
+    StructField('item_identifier', StringType(), True),
+    StructField('item_weight', StringType(), True),
+    StructField('item_fat_content', StringType(), True),
+    StructField('item_visibility', DoubleType(), True),
+    StructField('item_type', StringType(), True),
+    StructField('item_mrp', DoubleType(), True),
+    StructField('outlet_identifier', StringType(), True),
+    StructField('outlet_establishment_year', IntegerType(), True),
+    StructField('outlet_size', StringType(), True),
+    StructField('outlet_location_type', StringType(), True),
+    StructField('outlet_type', StringType(), True),
+    StructField('item_outlet_sales', DoubleType(), True)
+])
