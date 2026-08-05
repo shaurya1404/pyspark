@@ -84,7 +84,7 @@ print(df.loc["Charizard": "Blastoise", ["Height", "Weight"]]) # slice syntax
 print(df.iloc[0:11:2, 0:3]) # index-based slice lookup on first 10 with step of 2 and only first 3 cols
 ```
 
-## Filering
+## Filtering
 
 Analogous to WHERE in SQL. Keeping rows based on predicate logic yielding true
 
@@ -98,5 +98,33 @@ legendary_pokemons = df[df["Legendary"] == True]
 water_pokemons = df[(df["Type1"] == "Water") | (df["Type2"] == "Water")]
 
 print(water_pokemons)
+```
+
+# Aggregation
+
+Analogous to aggregate functions in SQL. Collapse a set of rows or values into single summary values. Often used with groupby()
+
+```python
+import pandas as pd
+
+df = pd.read_csv('pokemons.csv')
+
+# Whole DF
+print(df.mean(numeric_only = True)) # required param since they can only be performed on numeric cols
+print(df.sum(numeric_only = True))
+print(df.min(numeric_only = True))
+print(df.max(numeric_only = True))
+print(df.count())
+
+# Single Cols
+print(df["Height"].mean())
+
+# Group By
+group1 = df.groupby("Type1") # group1 is a data object
+group2 = df.groupby(["Type1", "Type2"]) 
+
+
+print(group1["Height"].mean())
+print(group2["Weight"].count())
 
 ```
