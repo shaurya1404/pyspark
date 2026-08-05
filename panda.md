@@ -100,7 +100,7 @@ water_pokemons = df[(df["Type1"] == "Water") | (df["Type2"] == "Water")]
 print(water_pokemons)
 ```
 
-# Aggregation
+## Aggregation
 
 Analogous to aggregate functions in SQL. Collapse a set of rows or values into single summary values. Often used with groupby()
 
@@ -126,5 +126,35 @@ group2 = df.groupby(["Type1", "Type2"])
 
 print(group1["Height"].mean())
 print(group2["Weight"].count())
-
 ```
+
+## Data Cleaning
+
+The process of fixing or removing incomplete, inconsistent, or irrelevant data
+
+```python
+import pandas as pd
+
+df = pd.read_csv('pokemons.csv')
+
+# Drop irrelevant cols
+df = df.drop(columns=["No", "Legendary"])
+
+# Handling Missing Data
+df = dropna(subset=["Type2"]) # only check the specified cols
+df = fillna("Type2": "None")
+
+# Fix inconsistent values
+df["Type1"] = df["Type1"].replace({
+    "Water": "WATER",
+    "Fire": "FIRE"
+})
+
+# Standarize text
+df["Name"] = df["Name"].str.lower() # .lower() requires .str since this is a Panda series and not a singular String object
+
+# Fix Data Types
+df["Legendary"] = df["Legendary"].astype(bool) # Converting 0 and 1 numeric value col to boolean
+
+# Remove duplicates
+df = df.drop_duplicates()
