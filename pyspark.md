@@ -192,7 +192,7 @@ df.display()
 ### Scenario 3 - Change the 'Low Fat' to 'LF" and the 'Regular' to 'Reg' in the Item_Fat_Content Column
 
 ```python
-df.withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Regular', 'Reg'))\
+df = df.withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Regular', 'Reg'))\
     .withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Low Fat', 'LF'))
 ```
 ***Note***: If column name already exists in the table (Scenrio 3), we modify a column, otherwise, create a new one
@@ -201,3 +201,30 @@ df.withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Regular', 
 It returns a Column, not a DataFrame. It's an expression, so it only means anything inside select(), withColumn(), filter(), etc.
 Nothing is mutated — df is unchanged unless you reassign.
 
+## Type Casting
+
+Change or clarify a columns data type
+
+```python
+df = df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
+```
+
+***Note***: StringType is a class; StringType() is an instance of that class - cast() requires an instance of the type you want converted to since it allows passing paramters, if needed, into the type we want such as `DecimalType(10, 2)`
+
+## Sort/Order By
+
+Analogous to ORDER BY in SQL Queries
+
+1) Scenario 1 - Order by according to Item Weight in descending order
+
+```python
+df.orderBy(col("Item_Weight").desc()).display()
+```
+
+***Note***: Use .asc() in the same manner
+
+2) Scenario 2 - Order by on the basis of (Item_Weight, Item_Visibility) - first in desc and second in asc
+
+```python
+df.orderBy(col("Item_Weight").desc(), col("Item_Visibility").asc()).display()
+```
