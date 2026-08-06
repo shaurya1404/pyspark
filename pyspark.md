@@ -159,3 +159,45 @@ Filter out rows that are either in Tier 1 or Tier 2 and have an Outlet Size of N
 ```python
 df.filter((col('Outlet_Location_Type').isin('Tier 1', 'Tier 2') & col('Outlet_Size').isNull())).display()
 ```
+
+## withColumnRenamed
+
+Allows us to rename the column directly in the DataFrame
+
+```python
+df.withColumnRenamed('item_weight', 'Item_Wt').display()
+```
+
+## withColumn
+
+Allows us to add a new column or modify an existing one
+
+### Scenario 1 - Add a new column 'flag' which has a constant value 'new' for each row
+
+```python
+df = df.withColumn('flag', lit('new'))
+df.display()
+```
+
+`lit()` allows converion of a Python value into a Column. It is needed when the value is being passed where a Column is required.
+In the above, `lit()` was necessary to store a constant value for each row since 2nd param of 'withColumn' expects the final relsut to be a Column
+
+### Scenario 2 - Add a new column 'multiply' which stores the multiplied values of 'Item_Weight' and 'Item_MRP' for each row
+
+```python
+df = df.withColumn('multiply', col('Item_Weight')*col('Item_MRP'))
+df.display()
+```
+
+### Scenario 3 - Change the 'Low Fat' to 'LF" and the 'Regular' to 'Reg' in the Item_Fat_Content Column
+
+```python
+df.withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Regular', 'Reg'))\
+    .withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Low Fat', 'LF'))
+```
+***Note***: If column name already exists in the table (Scenrio 3), we modify a column, otherwise, create a new one
+
+`regexp_replace(column, pattern, replacement)` finds every match of a regex in a string column and swaps it out — applied row by row, returning a new Column.
+It returns a Column, not a DataFrame. It's an expression, so it only means anything inside select(), withColumn(), filter(), etc.
+Nothing is mutated — df is unchanged unless you reassign.
+
