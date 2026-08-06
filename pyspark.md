@@ -205,9 +205,9 @@ Nothing is mutated — df is unchanged unless you reassign.
 
 Change or clarify a columns data type
 
-`.cast()` is a Column method, not a DataFrame method. It takes one column expression and returns a new column expression whose values are converted to a different data type. `.astype()` and `.cast()` are identical methods
+`.cast()` is a Column method, not a DataFrame method. It takes one column expression and returns a new column expression whose values are converted to a different data type. `.astype()` and `.cast()` are identical.
 
-`df.item_weight.cast(StringType())` is an just an expression - it won't mutate anything
+`df.item_weight.cast(StringType())` is just an expression - it won't mutate anything unless:
 
 ```python
 df = df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
@@ -237,7 +237,36 @@ df.orderBy(col("Item_Weight").desc(), col("Item_Visibility").asc()).display()
 
 ## Limit
 
-Anaogous to LIMIT in SQL
+Analogous to LIMIT in SQL.
 
 ```python
-df.limit(10).display
+df.limit(10).display()
+```
+
+## Drop
+
+Allows us to drop column(s) in the Data Frame
+
+```python
+df.drop('Item_Visibility', 'Item_Type').display()
+```
+
+## Drop Duplicates
+
+Allows us to get ride of duplicate rows in the DataFrame. Also known as 'dedup-ing' the DataFrame
+
+### Scenario 1 - Drop duplicates based on all columns
+```
+df.dropDuplicates().display()
+```
+OR
+```
+df.distinct().display()
+```
+`.distinct()` vs `.dropDuplicates()` — distinct() deduplicates across all columns. dropDuplicates() does the same when called bare, but accepts a subset: df.dropDuplicates(["email"]) keeps one row per email while retaining all the other columns. distinct() can't do that. Which row survives is non-deterministic unless you order first.
+
+### Scenario 2 - Dro Duplicates based on a subset of columns
+
+```
+df.dropDuplicates(['])
+
