@@ -112,3 +112,14 @@ my_struct_schema = StructType([
     StructField('outlet_type', StringType(), True),
     StructField('item_outlet_sales', DoubleType(), True)
 ])
+```
+
+## SELECT Statement
+
+Straight Forward way of performing SQL Select
+
+Select first 3 columns of the table only:
+1) `df.select('item_identifier', 'item_weight', 'item_fat_content').display()`
+2) `df.select(col('item_identifier'), col('item_weight'), col('item_fat_content')).display()`
+
+***Note***: 2nd syntax is the standardized approach since it's required while writing aggregations
