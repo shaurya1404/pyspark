@@ -134,3 +134,28 @@ from pyspark.sql.functions import *
 df.select(col('item_identifier').alias('item_ID'))
 ```
 
+## Filter
+
+### Scenario 1
+
+Filter out only those rows which consist of Item Fat Content as 'Regular'
+
+```python
+df.filter(col('Item_Fat_Content') == 'Regular').display()
+```
+
+### Scenario 2
+
+Filter out rows that have Item_Type as 'Soft Drinks' and Item_Weight < 10
+
+```python
+df.filter((col('Item_Type') == 'Soft Drinks') & (col(Item_Weight) <> 10)).display()
+```
+
+### Scenario 3
+
+Filter out rows that are either in Tier 1 or Tier 2 and have an Outlet Size of NULL
+
+```python
+df.filter((col('Outlet_Location_Type').isin('Tier 1', 'Tier 2') & col('Outlet_Size').isNull())).display()
+```
