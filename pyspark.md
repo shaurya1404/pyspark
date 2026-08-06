@@ -205,6 +205,10 @@ Nothing is mutated — df is unchanged unless you reassign.
 
 Change or clarify a columns data type
 
+`.cast()` is a Column method, not a DataFrame method. It takes one column expression and returns a new column expression whose values are converted to a different data type. `.astype()` and `.cast()` are identical methods
+
+`df.item_weight.cast(StringType())` is an just an expression - it won't mutate anything
+
 ```python
 df = df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
 ```
@@ -213,7 +217,7 @@ df = df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
 
 ## Sort/Order By
 
-Analogous to ORDER BY in SQL Queries
+Analogous to ORDER BY in SQL Queries. `.sort()` and `.orderBy()` are identical methods.
 
 1) Scenario 1 - Order by according to Item Weight in descending order
 
@@ -228,3 +232,12 @@ df.orderBy(col("Item_Weight").desc()).display()
 ```python
 df.orderBy(col("Item_Weight").desc(), col("Item_Visibility").asc()).display()
 ```
+
+***Note***: `orderBy` returns a new DataFrame. It doesn't directly mutate the original one unless we re-assign `df = df.orderBy(...)`
+
+## Limit
+
+Anaogous to LIMIT in SQL
+
+```python
+df.limit(10).display
