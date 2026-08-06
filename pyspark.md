@@ -256,11 +256,11 @@ df.drop('Item_Visibility', 'Item_Type').display()
 Allows us to get ride of duplicate rows in the DataFrame. Also known as 'dedup-ing' the DataFrame
 
 ### Scenario 1 - Drop duplicates based on all columns
-```
+```python
 df.dropDuplicates().display()
 ```
 OR
-```
+```python
 df.distinct().display()
 ```
 `.distinct()` vs `.dropDuplicates()` — distinct() deduplicates across all columns. dropDuplicates() does the same when called bare, but accepts a subset: df.dropDuplicates(["email"]) keeps one row per email while retaining all the other columns. distinct() can't do that. Which row survives is non-deterministic unless you order first.
@@ -268,5 +268,48 @@ df.distinct().display()
 ### Scenario 2 - Dro Duplicates based on a subset of columns
 
 ```
-df.dropDuplicates(['])
+df.dropDuplicates(['Item_Type']).display()
+```
 
+## Union/Union By Name
+
+### Preparing Data
+
+`spark.createDataFrame(data, schema=None, samplingRatio=None, verifySchema=True)` is the method that turns data already sitting in your Python process into a Spark DataFrame.
+
+`spark.read.*` reads from external files or tables stored in volumes or cloud storage and converts those into a Spark DataFrame.
+
+Param 1 (data): list of tuples, list of lists, or list of dicts (keys become column names)
+Param 2 (schema): define the column names explicitly along with data type
+Param 3 (samplingRatio): Not usable on serverless, so this is a "know it exists"
+Param 4: (verifySchema): Default True. Spark checks every row against your declared schema and raises on mismatch.
+
+```python
+data1 = [('Anthony', 1), ('Ethan', 2)]
+schema1 = 'id STRING, name STRING'
+
+df1 = spark.createDataFrame(data1, schema1)
+
+data2 = [(3, 'Jack'), (4, 'Alex')]
+schema2 = 'id STRING, name STRING'
+
+df2 = spark.createDataFrame(data2, schema2)
+
+df1.union(df2).display() # matches columns by POSITION
+```
+
+```python
+df1.unionByName(df2).display() # matches columns by NAME
+```
+
+***Rule of thumb***: default to unionByName()
+
+## String Functions
+
+They return a Column. So, then can be used anywhere where a column expression is expected such as `.select()`, `.withColumn()`, `.groupBy()`,   `.filter()`
+
+`df.select(upper(col('Item_Type')).alias('name_upper')).display()`
+`df.select(lower(col('Item_Type'))).display()`
+`df.select(initcap('Item_Type')).display()`
+
+***Note***: initCap() normalizes all the other letters except first letters to lowercase. UNITED states -> United States
