@@ -313,3 +313,27 @@ They return a Column. So, then can be used anywhere where a column expression is
 `df.select(initcap('Item_Type')).display()`
 
 ***Note***: initCap() normalizes all the other letters except first letters to lowercase. UNITED states -> United States
+
+
+## Date Functions
+
+```python
+df.withColumn('current_date', current_date()) # Adding a new column containing current date for all rows
+
+```
+
+```python
+df.withColumn('one_week_later', date_add('current_date', 7)) # Adding a new column containing 'current date' + 7 days 
+```
+
+```python
+df.withColumn('one_week_earlier', date_add('current_date', -7)) # Adding a new column containing 'current_date' - 7 days
+```
+
+```python
+df = df.withColumn('diff_dates', datediff('one_week_later', 'current_date')) # week_later - current_date = 7 (order matters)
+```
+
+```python
+df = df.withColumn('new_format', date_format('current_date_new', 'dd-MM-yyyy')) # New column with diff date format (dd-MM-yyyy is case sensitive)
+```
