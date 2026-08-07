@@ -376,7 +376,25 @@ df.withColumn('Outlet_Type', split('Outlet_Type', ' ')) # Splits and stores the 
 df.withColumn('Output_Type', split('Output_Type', ' ')[1]) # Accessing the 1st index value from the list for each row
 ```
 
-***Note***: C`limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit:
+***Note***: `limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit:
 ```python
 split(col("s"), "-", 2)     # "a-b-c-d" -> ["a", "b-c-d"]
+```
+
+### Explode
+
+`explode(arr)` flattens (explodes) the array vertically - one row per element in the array
+
+```python
+df_exp = df.withColumn('Outlet_Type', explode(split('Outlet_Type', ' ')))
+df_exp = display()
+```
+
+### Array_Contains
+
+`array_contains(arr, val)` tests whether an array column contains a specific value. Returns a Boolean column — one true/false (or null) per row.
+
+```python
+df_arrcont = df.withColumn('type1_flag', array_contains(split('Outlet_Type', ' '), 'Type1'))
+df_arrcont.display()
 ```
