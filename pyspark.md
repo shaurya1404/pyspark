@@ -337,3 +337,46 @@ df = df.withColumn('diff_dates', datediff('one_week_later', 'current_date')) # w
 ```python
 df = df.withColumn('new_format', date_format('current_date_new', 'dd-MM-yyyy')) # New column with diff date format (dd-MM-yyyy is case sensitive)
 ```
+
+## Handling NULLs
+
+### Case 1: Dropping NULLs
+
+```python
+df.dropna('all').display() # Drops all rows that have NULL stored in ALL the column values
+```
+
+```python
+df.dropna('any').display() # Drops all rows that have NULL stored in ANY of the column values
+```
+
+```python
+df.dropna(subset=['Outlet_Size']).display() # Drops all rows that contain NULL in only the given list of columns
+```
+
+### Case 2: Filling NULLs
+
+```python
+df.fillna('N/A').display() # Replace all NULLs in the DataFrame (restricted to columns having the same data type as the given value)
+```
+
+```python
+df.fillna('N/A', subset=['Outlet_Size']) # Replace all NULLs for the given list of column(s)
+```
+
+## Split and Array Indexing
+
+`split(str, pattern, limit = -1)` takes a string column and breaks it into an array of strings.
+
+```python
+df.withColumn('Outlet_Type', split('Outlet_Type', ' ')) # Splits and stores the column values into a list based on the delimiter
+```
+
+```python
+df.withColumn('Output_Type', split('Output_Type', ' ')[1]) # Accessing the 1st index value from the list for each row
+```
+
+***Note***: C`limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit:
+```python
+split(col("s"), "-", 2)     # "a-b-c-d" -> ["a", "b-c-d"]
+```
