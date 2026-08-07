@@ -398,3 +398,70 @@ df_exp = display()
 df_arrcont = df.withColumn('type1_flag', array_contains(split('Outlet_Type', ' '), 'Type1'))
 df_arrcont.display()
 ```
+
+***Note***: Functions like .coalesce() expect Column objects. So, use lit(value) instead of 'value' whenever passing raw Python values to any function by default - worst case, it's just redundant
+
+## Grouping and Aggregation
+
+`groupBy()` in and of itself is an incomplete, intermediate expression - it does NOT return a DataFrame.
+`groupBy()` is always half of a two-step expression: Group → aggregate
+Everything not grouped on and not aggregated disappears.
+
+```python
+df.groupBy("dept")                                  # <pyspark.sql.group.GroupedData object at 0x...>
+df.groupBy("dept").count()                          # now it's a DataFrame
+df.groupBy("dept").agg(sum("salary"), avg("age"))   # columns: dept | sum(salary) | avg(age)
+```
+
+### Two Ways to Aggregate
+
+1) Applying shortcut methods on groupedBy data
+
+```python
+df.groupBy("dept").count()
+df.groupBy("dept").sum("salary")
+df.groupBy("dept").avg("salary", "bonus")     # multiple cols, same function
+df.groupBy("dept").max("salary")
+df.groupBy("dept").min("salary")
+df.groupBy("dept").mean("salary")             # alias for avg
+```
+
+2) Using `agg()`
+
+This is the method to use by default because `agg()` lets you mix different functions on different columns and — critically — name the outputs. Without .alias(), you get columns literally named sum(salary).
+
+```python
+df.groupBy("dept").agg(
+    count("*").alias("headcount"),
+    sum("salary").alias("total_salary"),
+    avg("salary").alias("avg_salary"),
+    max("hire_date").alias("newest_hire")
+)
+```
+
+`count("*")` v/s `count("col")`: Former yields rows per group inclusive of NULLs. Latter yields rows per group where value is not null.
+`countDistinct("col")`: Count of distinct non-null values.
+
+***Note***: PySpark has no `.having()`. You just call `.filter()`/`.where()` on the DataFrame AFTER `.agg()`. Same method, position in the chain determines the meaning.
+
+### Collect List
+
+`collect_list()` is an aggregate function that gathers every value in a group into a single array.
+Most aggregates reduce many values to one (`sum`, `avg`, `max`). `collect_list()` accumulates — it keeps them all, just repackaged into one array-typed cell.
+
+`collect_set()` also stores all the values for the group in a LIST but removes duplicates
+
+```python
+data1 = [("eng", "alice"),
+         ("eng", "bob"),
+         ("sales", "cara"),
+         ("eng", "alice"),
+         ("sales", "dave"),
+         ("hr", "eve")
+         ]
+schema1 = 'dept STRING, name STRING'
+
+df_new = spark.createDataFrame(data1, schema1)
+
+df_new.groupBy('dept').agg(collect_list("name")).display()
+```
