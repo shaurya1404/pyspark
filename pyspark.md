@@ -504,6 +504,18 @@ df.withColumn('veg_flag', when(col("Item_Type").isNull(), lit(False)).when(col("
 df.withColumn('veg_exp_flag', when((col('Item_Type').isNull()) | (col('Item_MRP').isNull()), 'Unknown').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') > 100), 'Veg & Expensive').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') <= 100), 'Veg & Cheap').otherwise('Non-Veg')).display()
 ```
 
+### Scenario 3 - Using When-Otherwise inside a Aggregate Function
+
+from pyspark.sql.functions import sum, count
+
+```python
+df.groupBy("dept").agg(
+    count("*").alias("total"),
+    sum(when(col("status") == "active", lit(1)).otherwise(lit(0))).alias("active_count"),
+    sum(when(col("salary") > 100000, col("salary"))).alias("high_earner_payroll")
+)
+```
+
 ## JOIN
 
 Analogous to JOIN in SQL
