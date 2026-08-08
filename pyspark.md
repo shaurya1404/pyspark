@@ -465,3 +465,37 @@ df_new = spark.createDataFrame(data1, schema1)
 
 df_new.groupBy('dept').agg(collect_list("name")).display()
 ```
+
+### Pivot
+
+`pivot(pivot_col, values=None)` takes a `pivot_column` column whose values are used as headers. `values` is an optional explicit list of which values from `pivot_column` to turn into column headers.
+
+`pivot()` is a method on GroupedData, not on DataFrame. So it can only ever appear in the middle and all three are mandatory.:
+
+df.groupBy("dept").pivot("year").agg(sum("salary"))
+#  ─────┬─────     ───┬───        ──┬──
+#      rows        columns      cell values
+
+The above is functionally the same as `df.group("dept", "year").agg(sum("salary"))` except that the Pivot version has a cell for each and every row x column value possible - shows NULL in case no values exist for a specific combination.
+
+**How do you optimize a Pivot?** - Pass a `values` list even if you need all of the values as column headers. This optimizes the Pivot operation since, otherwise, Spark has to execute a prior full table scan to find all distinct values of that column.
+
+***Note***: You can group by many columns, but you can only pivot on one.
+
+## When Otherwise
+
+PySpark's version of CASE WHEN
+1) Always use parenthesis around each condition when using `&`, `|`, or `~` to combine multiple conditions 
+2) A comparison against null yields null, not false — so the row falls through to the next branch or to otherwise(). Hence, always handle NULLs using isNull()
+
+### Scenario 1 - Create a 'veg_flag' column to categorize items as veg or not
+
+```python
+df.withColumn('veg_flag', when(col("Item_Type").isNull(), lit(False)).when(col("Item_Type") == 'Meat', lit(False)).otherwise(lit(True))).display()
+```
+
+### Scenario 2 - Column that marks Veg Items w/ Price > 100 as 'Veg & Expensive', Veg Items w/ Price <= 100 as 'Veg & Cheap', otherwise Non-Veg
+
+```python
+df.withColumn('veg_exp_flag', when((col('Item_Type').isNull()) | (col('Item_MRP').isNull()), 'Unknown').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') > 100), 'Veg & Expensive').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') <= 100), 'Veg & Cheap').otherwise('Non-Veg')).display()
+```
