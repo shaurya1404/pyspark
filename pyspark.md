@@ -485,6 +485,10 @@ The above is functionally the same as `df.group("dept", "year").agg(sum("salary"
 ## When Otherwise
 
 PySpark's version of CASE WHEN
+
+`when(col("bonus").isNull(), lit(0)).otherwise(col("bonus"))`
+`when(col("type") == "A", col("price") * 0.9).otherwise(col("price"))`
+
 1) Always use parenthesis around each condition when using `&`, `|`, or `~` to combine multiple conditions 
 2) A comparison against null yields null, not false — so the row falls through to the next branch or to otherwise(). Hence, always handle NULLs using isNull()
 
@@ -499,3 +503,25 @@ df.withColumn('veg_flag', when(col("Item_Type").isNull(), lit(False)).when(col("
 ```python
 df.withColumn('veg_exp_flag', when((col('Item_Type').isNull()) | (col('Item_MRP').isNull()), 'Unknown').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') > 100), 'Veg & Expensive').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') <= 100), 'Veg & Cheap').otherwise('Non-Veg')).display()
 ```
+
+## JOIN
+
+Analogous to JOIN in SQL
+
+### Inner JOIN
+
+```python
+df1.join(df2, df1.dept_id == df2.dept_id, 'inner').display()
+```
+### Left/Right JOIN
+
+```python
+df1.join(df2, df1.dept_id == df2.dept_id, 'left').display()
+```
+
+### Anti Join
+
+Used to retrieve all the rows that are in the first data frame but NOT in the second
+
+```python
+df1.join(df2, df1.dept_id == df2.dept_id, 'anti').display() # Displays records in df1 but not in df2
