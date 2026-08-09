@@ -699,8 +699,45 @@ categorize_udf = udf(categorize, StringType()) # udf(python_function, return_typ
 df.withColumn("band", categorize_udf(col("salary")))
 ```
 
-**Important**: A UDF is a last resort, not a tool of first choice. Native PySpark functions will always have much better performance and will be optimizable. The example above needs no UDF at all:
+**Important**: A UDF is a last resort, not a tool of first choice. Native PySpark functions will always be better because:
+
+1) Much better performance since executor nodes run on JVMs. Thus, each row transformation in a UDF must be serialized for the Python interpretor 
+2) UDFs are not optimizable since Spark's optimizer treats a UDF is a black box.
+
+The example above needs no UDF at all:
 
 ```python
 df.withColumn('band', when(col('salary') > 100000, 'high').when(col('salary' > 50000, 'medium')).otherwise('low'))
 ```
+
+## DataFrame Writer API
+
+`df.write` returns a DataFrame Writer object. The mirror image of `spark.read` and structurally identical:
+
+|            | Reader                               | Writer                                                    |
+|------------|--------------------------------------|-----------------------------------------------------------|
+| Entry point| `spark.read`                         | `df.write`                                                |
+| Configure  | `.format()`, `.option()`, `.schema()`| `.format()`, `.option()`, `.mode()`, `.partitionBy()`     |
+| Terminate  | `.load()` / `.table()`               | `.save()` / `.saveAsTable()`                              |
++------------+--------------------------------------+-----------------------------------------------------------+
+
+The Write is an action. Everything you've chained — filters, joins, window functions — has been a lazy plan. Calling .save() or .saveAsTable() is what actually triggers execution.
+
+### The 4 Save Modes
+
+Governs what happens when the target already exists.
+`df.write.mode("overwrite").saveAsTable("...")`
+
+`error`:	    Throws. This is the default.
+`append`:	    Adds new rows, keeps existing
+`overwrite`:	Replaces everything	
+`ignore`:	    Silently does nothing. No write, no error
+
+### Table vs Path
+
+`df.write.format('csv').mode("overwrite").saveAsTable("workspace.default.employees")` - Registers in the Unity Catalog.
+Creates a managed table. The Catalog manages the data lifecycle and storage location. 
+Read it back by name: `spark.read.table("workspace.default.employees")`
+
+`df.write.format('csv').mode("overwrite").save("/Volumes/workspace/default/raw_data/output")` — Writes files to a location.
+Produces a directory of data and meta-data files, not a single file. No catalog entry — you read it back by path.
