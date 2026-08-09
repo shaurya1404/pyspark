@@ -803,3 +803,22 @@ Parquet files also store Min/max statistics per column chunk in the footer. so, 
 Spark reads the footer, checks each row group's salary min/max, and skips entire row groups whose max is below 100000. 
 
 ***Note***: Delta is not a file format. It's Parquet files plus a transaction log.
+
+## ### Managed vs External Tables
+
+Managed: Unity Catalog owns the data and the metadata.
+External: Unity Catalog owns only the metadata. You own the data.
+
+Dropping a managed table deletes both the metadata and the underlying data files. Dropping an external table removes only the catalog entry; the files remain in cloud storage. Thus, external tables are safer at the cost of auto-optimization.
+
+The difference in how you create them is just whether you specify an external location or not.
+
+**Create a Managed Table**:
+Python: `df.write.saveAsTable("workspace.default.employees")`
+SQL: `CREATE TABLE employees (id INT, name STRING);`
+
+***Note***: Path-based access to managed tables isn't supported since it would bypass Unity Catalog's access control. You must use the format `catalog.schema.table`
+
+**Create an External Table**:
+Python: `df.write.option("path", "abfss://.../employees").saveAsTable("...")`
+SQL: `CREATE TABLE employees LOCATION 'abfss://container@account.dfs.core.windows.net/data/employees';`
