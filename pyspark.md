@@ -537,3 +537,147 @@ Used to retrieve all the rows that are in the first data frame but NOT in the se
 
 ```python
 df1.join(df2, df1.dept_id == df2.dept_id, 'anti').display() # Displays records in df1 but not in df2
+```
+
+## Window Functions
+
+Ranking Window Functions: `row_number()`, `rank()`, `dense_rank()`
+All three are Window Functions, i.e, they don't collapse rows the way groupBy does - each input row gets an output row with a new value attached
+
+```python
+from pyspark.sql.window import Window
+from pyspark.sql.functions import row_number, rank, dense_rank, col
+
+# Every window function has these two pieces:
+
+window_spec = Window.partitionBy("dept").orderBy(col("salary").desc())
+df.withColumn("rn", row_number().over(window_spec))
+```
+
+`.partitionBy()`: Splits rows into independent groups; numbering restarts in each. If not given, the entire table is one window
+`.orderBy()`: Defines the basis of the sort within each partition. If not given, every row in one window gets the same value
+
+***Note***: `orderBy()` is mandatory for the three ranking functions.
+
+**Caveat**: `row_number()` is non-deterministic on ties
+
+Solution: Use a tie-breaker column to make ensure that the produced output is the same on reruns
+
+```python
+# fragile
+Window.partitionBy("dept").orderBy(col("salary").desc())
+
+# deterministic
+Window.partitionBy("dept").orderBy(col("salary").desc(), col("emp_id").asc())
+```
+
+### Important Use-Cases
+
+1) Top N per-group
+
+```python
+
+# Find the top 3 distinct salaries and the respective employees for each department (include ties)
+w = Window.partitionBy('dept_id').orderBy('salary').desc()
+df_top3 = df.withColumn('top_3', dense_rank().over(w))
+    .filter(col('top_3') <= 3).drop('top_3') # drop() for pure cleanliness - the derived col was just scaffolding
+df_top3.display()
+```
+
+2) Deduplication
+
+```python
+
+# Deduplicate on the basis of 'customer_id' while only keeping rows with the most recent 'updated_at' for each customer
+w = Window.partitionBy('customer_id').orderBy('updated_at').desc()
+df_deduped = df.withColumn('deduped', row_number().over(w))
+    .filer(col('deduped') = 1).drop('deduped') # drop() for pure cleanliness - the derived col was just scaffolding
+df_deduped.display()
+```
+
+3) Cumulative Sum
+
+Same as a running total - each row shows the sum of everything up to and including itself, in a defined order.
+
+Without context of frame, the way to presume calculation of Cumulative totals is using vanilla orderBy in a Window function.
+This works fine until the column that we ordered by in the window function has a TIE:
+
+```python
+from pyspark.sql.window import Window
+from pyspark.sql.functions import sum, col
+
+data = [
+    (1, "Sales", "2024-01-01", 100),
+    (2, "Sales", "2024-01-02", 200),
+    (3, "Sales", "2024-01-02", 300),   # ← tie on date with id = 2
+    (4, "Sales", "2024-01-03", 400),
+]
+
+df = spark.createDataFrame(data, "id INT, dept STRING, date STRING, amount INT")
+```
+
+```python
+w_no_order = Window.partitionBy("dept") # partitionBy can be omitted
+
+w_default  = Window.partitionBy("dept").orderBy("date")
+
+w_rows     = (Window.partitionBy("dept")
+              .orderBy("date")
+              .rowsBetween(Window.unboundedPreceding, Window.currentRow))
+
+result = (df
+    .withColumn("no_order",  sum("amount").over(w_no_order))
+    .withColumn("default",   sum("amount").over(w_default))
+    .withColumn("with_rows", sum("amount").over(w_rows)))
+
+result.show()
+```
+
+**Output**
++---+-----+----------+------+--------+-------+---------+
+| id| dept|      date|amount|no_order|default|with_rows|
++---+-----+----------+------+--------+-------+---------+
+|  1|Sales|2024-01-01|   100|    1000|    100|      100|
+|  2|Sales|2024-01-02|   200|    1000|    600|      300|
+|  3|Sales|2024-01-02|   300|    1000|    600|      600|
+|  4|Sales|2024-01-03|   400|    1000|   1000|     1000|
++---+-----+----------+------+--------+-------+---------+
+
+Essentially, a window function specification has three parts to it:
+- partitionBy = which rows are in scope
+- orderBy = what sequence they're in
+- frame = how much of that ordered sequence can the current row see
+
+`orderBy` sorts AND changes an aggregate into a running aggregate. The default frame is `RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`
+
+RANGE-based frame -> value-based: Every row whose ordering value equals this row's. All ties are considered within one group.
+ROW-based frame-> position-based: True row-by-row accumulation
+
+1) Reverse Cum Sum / Remaining Amount
+
+```python
+w = (Window.orderBy("date")
+           .rowsBetween(Window.currentRow, Window.unboundedFollowing))
+
+df.withColumn("rev_cum_sum", sum("Item_MRP").over(w))
+```
+
+2) Omitting Order By
+
+```python
+w = (Window.orderBy("date")
+           .rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing))
+
+df.withColumn("omit_orderby", sum("Item_MRP").over(w))
+```
+
+**Output**
++---+-----+----------+------+--------------+----------+
+| id| dept|      date|amount|reverse_cumsum|dept_total|
++---+-----+----------+------+--------------+----------+
+|  1|Sales|2024-01-01|   100|          1000|      1000|
+|  2|Sales|2024-01-02|   200|           900|      1000|
+|  3|Sales|2024-01-02|   300|           700|      1000|
+|  4|Sales|2024-01-03|   400|           400|      1000|
++---+-----+----------+------+--------------+----------+
+
