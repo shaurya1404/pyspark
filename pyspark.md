@@ -741,3 +741,65 @@ Read it back by name: `spark.read.table("workspace.default.employees")`
 
 `df.write.format('csv').mode("overwrite").save("/Volumes/workspace/default/raw_data/output")` — Writes files to a location.
 Produces a directory of data and meta-data files, not a single file. No catalog entry — you read it back by path.
+
+## Parquet and Columnar Storage
+
+Row-Oriented (CSV, JSON, Avro) store data record by record:
+
+1,Alice,Eng,5000 | 2,Bob,Sales,4000 | 3,Carol,Eng,6000
+└──── row 1 ────┘ └──── row 2 ─────┘ └──── row 3 ────┘
+
+Column-Oriented (Parquet, ORC) store data column by column:
+
+1,2,3 | Alice,Bob,Carol | Eng,Sales,Eng | 5000,4000,6000
+└─id─┘ └──── name ─────┘ └─── dept ────┘ └─── salary ───┘
+
+### Why Columnar for data Analytics?
+
+1) Read only what you asked for
+
+`df.agg(sum("salary"))`
+
+**Row Format**: Every byte of every row must be read off disk, then 3 of 4 fields discarded. On a 200-column table where you need 3 columns, you read 100% of the data to use 1.5%.
+
+**Column Format**: Seek directly to the salary bytes. Read 25% of the file in a 4-column table. On that 200-column table, ~1.5%.
+
+Hence, Columnar format improves I/O efficiency ~10-50x
+As a corollary, `SELECT *`throws away Parquet's main advantage. Selecting only needed columns isn't just tidy style — it's a physical optimization.
+
+2) Data Compression
+
+A row holds multiple data types which cannot be exploited for compression. A column holds a single data type which can be mapped to a smaller data type - thus, minimizing storage by storing the mapping and all the field values as that of the smaller data type.
+
+Hence, Parquet files are 5–10× smaller than the equivalent CSV.
+
+### Parquet's Internal Structure
+
+┌─────────────────────────────────────┐
+│ PAR1                                │
+├─────────────────────────────────────┤
+│ Row Group 1  (~128MB of rows)       │
+│   ├─ Column chunk: id               │
+│   │    └─ Page, Page, Page          │
+│   ├─ Column chunk: name             │
+│   ├─ Column chunk: dept             │
+│   └─ Column chunk: salary           │
+├─────────────────────────────────────┤
+│ Row Group 2                         │
+│   └─ ... same column chunks ...     │
+├─────────────────────────────────────┤
+│ FOOTER                              │
+│   ├─ schema                         │
+│   ├─ row group locations            │
+│   └─ per-chunk stats: min/max/count │
+├─────────────────────────────────────┤
+│ footer length + PAR1                │
+└─────────────────────────────────────┘
+
+It's a hybrid, not purely columnar. Data is first cut horizontally into row groups, and columnar layout applies within each row group. This is the design allows each row group to go to a different executor in parallel.
+
+Parquet files also store Min/max statistics per column chunk in the footer. so, for a filter query like:
+`df.filter(col("salary") > 100000)`
+Spark reads the footer, checks each row group's salary min/max, and skips entire row groups whose max is below 100000. 
+
+***Note***: Delta is not a file format. It's Parquet files plus a transaction log.
