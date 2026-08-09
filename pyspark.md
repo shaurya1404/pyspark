@@ -681,3 +681,26 @@ df.withColumn("omit_orderby", sum("Item_MRP").over(w))
 |  4|Sales|2024-01-03|   400|           400|      1000|
 +---+-----+----------+------+--------------+----------+
 
+## User-Defined Functions (UDF)
+
+A UDF wraps Python function as a Column function — powerful, and the slowest tool in the box.
+A plain Python function runs on one scaler value at a time. A Spark function uses it as a column-in/column-out function
+
+```python
+def categorize(salary):
+    if salary > 100000:
+        return "high"
+    elif salary > 50000:
+        return "medium"
+    return "low"
+
+categorize_udf = udf(categorize, StringType()) # udf(python_function, return_type_constructor)
+
+df.withColumn("band", categorize_udf(col("salary")))
+```
+
+**Important**: A UDF is a last resort, not a tool of first choice. Native PySpark functions will always have much better performance and will be optimizable. The example above needs no UDF at all:
+
+```python
+df.withColumn('band', when(col('salary') > 100000, 'high').when(col('salary' > 50000, 'medium')).otherwise('low'))
+```
