@@ -822,3 +822,33 @@ SQL: `CREATE TABLE employees (id INT, name STRING);`
 **Create an External Table**:
 Python: `df.write.option("path", "abfss://.../employees").saveAsTable("...")`
 SQL: `CREATE TABLE employees LOCATION 'abfss://container@account.dfs.core.windows.net/data/employees';`
+
+## Spark SQL
+
+SQL and the DataFrame API use the same engine. Both are parsed into a logical plan, optimized by Catalyst, and executed identically.
+
+`df.filter(col("salary") > 5000).groupBy("dept").count()`
+`spark.sql("SELECT dept, COUNT(*) FROM employees WHERE salary > 5000 GROUP BY dept")`
+
+Identical physical plan. Identical performance. The choice is purely about readability, not speed.
+
+### Temp Views and spark.sql()
+
+A temp view is how SQL finds your DataFrame. spark.sql() is how you run SQL in Spark.
+
+If the thing you want to query exists only as a Python DataFrame, SQL has no way to reach it. Thus, we create a temp view of that DataFrame, apply the query, then store the results back into a DataFrame.
+
+```python
+df.createOrReplaceTempView("employees")     # creating a temp view from 'df' DataFrame
+spark.sql("SELECT * FROM employees")        # returns a DataFrame
+```
+
+`spark.sql()` returns a DataFrame object. Hence, it can be chained with PySpark methods:
+```python
+spark.sql("SELECT * FROM employees").filter(col("dept") == "Eng").show()
+```
+
+You don't need to create a temp view if you wish to directly work on a stored table rather than a Python DataFrame:
+```python
+spark.sql("SELECT * FROM workspace.default.employees")   # works, no view needed
+```
