@@ -2,7 +2,7 @@
 
 ## What is Spark? Why does it exist?
 
-- Up until now,I was pewrforming SQL operations on a single system in order to transform, clean, and load data. However, a single system in and of itself will have resource constraints - say 16GB RAM with 8 cores.
+- Up until now, I was performing SQL operations on a single system in order to transform, clean, and load data. However, a single system in and of itself will have resource constraints - say 16GB RAM with 8 cores.
 
 - So, as data increases, resources have a ceiling limit to perform the operations. When handling big data such as terabytes or petabytes of data, things will really start to slow down.
 
@@ -66,7 +66,7 @@ spark.read.format('csv').option('header', True).option('inferSchema', True).load
 
 1) DDL
 
-DDL can be used to define the Schema explicitly instead of letting Spark infer via the inferSchema option od the DataFrameReader.
+DDL can be used to define the Schema explicitly instead of letting Spark infer via the inferSchema option of the DataFrameReader.
 The following structType definition (similar to SQL queries) can be passed into `.schema(structType)` to define the Schema of a DF via DDL
 
 ```python
@@ -92,7 +92,7 @@ my_ddl_schema = '''
 
 StructType is the second way of defining the Schema of your DataFrame.
 
-- `StructField` - Defines a single columns: a name, a datatype, and whether NULLs are allowed
+- `StructField` - Defines a single column: a name, a datatype, and whether NULLs are allowed
 - `StructType` - An ordered list of StructFields (columns).
 
 ```python
@@ -116,7 +116,7 @@ my_struct_schema = StructType([
 
 ## SELECT Statement
 
-Straight Forward way of performing SQL Select
+Straight forward way of performing SQL Select
 
 Select first 3 columns of the table only:
 1) `df.select('item_identifier', 'item_weight', 'item_fat_content').display()`

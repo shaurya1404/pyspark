@@ -18,7 +18,7 @@ Data is not stored as rows and coluns in a Database. Data Files are the OS-level
 
 ## Why Index?
 
-Without an index, data is stored as a heap structure, i.e, data is inserted in chronological order with no sorting. Since no sorting is involved, data writes are extremely fast. Searching is extremely slow as a Full Table Scan is done since there's no logical sorting of the data. Time complexity is `O(n)`.
+Without an index, data is stored as a heap structure, i.e, data is inserted in chronological order with no sorting. Since no sorting is involved, data writes are extremely fast. Searching is extremely slow as a Full Table Scan is done since there's no logical sorting of the data. Time complexity is `O(n)`
 
 ## B-Tree
 
@@ -34,7 +34,7 @@ A Clustered Index determines the physical order rows are stored on disk. The row
 
 The leaf nodes of the B-Tree of a Clustered Index containes the Data Pages themselves.
 
-## Non-clsutered Index
+## Non-clustered Index
 
 A Non-Clustered Index doesn't physically re-arrange or affect the rows in the Data Pages. Unlike Clustered Indexes, the leaf nodes are not data Pages but instead Index Pages that consist of row-locator rows having a 1:1 mapping to the actual rows in the Data Pages.
 
@@ -75,7 +75,7 @@ Creating an index based on more than one column.
 
 ## Rowstore Index
 
-The default index. Data is indexed and stored row-by-row. Every column of the row sits together physically.
+The default index. Data is indexed and stored row-by-row. Every column of the row sits together.
 
 **Structure**: B-tree
 
