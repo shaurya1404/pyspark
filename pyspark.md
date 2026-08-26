@@ -114,6 +114,8 @@ my_struct_schema = StructType([
 ])
 ```
 
+***Note***: You can pass optional paramters in data types of StructType Schema definition such as `DecimalType(10, 2)`
+
 ## SELECT Statement
 
 Straight forward way of performing SQL Select
@@ -149,7 +151,7 @@ df.filter(col('Item_Fat_Content') == 'Regular').display()
 Filter out rows that have Item_Type as 'Soft Drinks' and Item_Weight < 10
 
 ```python
-df.filter((col('Item_Type') == 'Soft Drinks') & (col(Item_Weight) <> 10)).display()
+df.filter((col('Item_Type') == 'Soft Drinks') & (col(Item_Weight) < 10)).display()
 ```
 
 ### Scenario 3
@@ -179,7 +181,7 @@ df = df.withColumn('flag', lit('new'))
 df.display()
 ```
 
-`lit()` allows converion of a Python value into a Column. It is needed when the value is being passed where a Column is required.
+`lit()` allows converion of a Python value into a Column. It is needed when the value is being passed where a Column is expected.
 In the above, `lit()` was necessary to store a constant value for each row since 2nd param of 'withColumn' expects the final relsut to be a Column
 
 ### Scenario 2 - Add a new column 'multiply' which stores the multiplied values of 'Item_Weight' and 'Item_MRP' for each row
@@ -200,6 +202,19 @@ df = df.withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Regul
 `regexp_replace(column, pattern, replacement)` finds every match of a regex in a string column and swaps it out — applied row by row, returning a new Column.
 It returns a Column, not a DataFrame. It's an expression, so it only means anything inside select(), withColumn(), filter(), etc.
 Nothing is mutated — df is unchanged unless you reassign.
+
+## col() vs lit()
+
+Both col() and lit() return a Column object but:
+`col('x')` is a pointer. It says "go find the column named x and read this row's value from it." The value changes on every row.
+`lit(v)` is a constant. It says "the value is v, always." Identical on every row.
+
+```python
+df.withColumn('a', col('Item_Wt'))   # 12.5, 8.3, 19.0 ...
+df.withColumn('b', lit('Item_Wt'))   # "Item_Wt", "Item_Wt" ...
+```
+
+Functions in `pyspark.sql.functions` that take multiple Column arguments, such as `concat()`, `array()`, `coalesce()`, `greatest()`, interpret bare strings as column names, not literals. Any time you want a literal inside one of these, `lit()` is mandatory.
 
 ## Type Casting
 
