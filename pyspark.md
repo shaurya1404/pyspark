@@ -45,8 +45,8 @@ Spark's Lazy architecture is a feature, not a bug; it allows Spark to create an 
 `spark.read` gives access to the DataFrameReader - a configurable object whose purpose is to turn external files into a DataFrame
 
 spark.read.format('csv').option('header', True).option('inferSchema', True).load(path)
-#     └──────┬────────┘ └──────────────────────┬──────────────────────────┘ └───┬───┘
-#      get the reader                   configure the reader                execute
+###   └──────┬────────┘ └──────────────────────┬──────────────────────────┘ └───┬───┘
+###    get the reader                   configure the reader                execute
 
 1) `.format(str)` - The data source: csv, json, parquet, delta, text. Defaults to `parquet` if not mentioned.
 
@@ -164,7 +164,8 @@ df.filter((col('Outlet_Location_Type').isin('Tier 1', 'Tier 2') & col('Outlet_Si
 
 ## withColumnRenamed
 
-Allows us to rename the column directly in the DataFrame
+Allows us to rename the column directly in the DataFrame.
+Syntax: `withColumnRenamed(string, string)`
 
 ```python
 df.withColumnRenamed('item_weight', 'Item_Wt').display()
@@ -172,7 +173,8 @@ df.withColumnRenamed('item_weight', 'Item_Wt').display()
 
 ## withColumn
 
-Allows us to add a new column or modify an existing one
+Allows us to add a new column or modify an existing one.
+Syntax: `withColumnRenamed(string, col_exprsn)`
 
 ### Scenario 1 - Add a new column 'flag' which has a constant value 'new' for each row
 
@@ -182,12 +184,12 @@ df.display()
 ```
 
 `lit()` allows converion of a Python value into a Column. It is needed when the value is being passed where a Column is expected.
-In the above, `lit()` was necessary to store a constant value for each row since 2nd param of 'withColumn' expects the final relsut to be a Column
+In the above, `lit()` was necessary to store a constant value for each row since 2nd param of 'withColumn' expects a Column
 
 ### Scenario 2 - Add a new column 'multiply' which stores the multiplied values of 'Item_Weight' and 'Item_MRP' for each row
 
 ```python
-df = df.withColumn('multiply', col('Item_Weight')*col('Item_MRP'))
+df = df.withColumn('multiply', col('Item_Weight') * col('Item_MRP'))
 df.display()
 ```
 
@@ -205,9 +207,9 @@ Nothing is mutated — df is unchanged unless you reassign.
 
 ## col() vs lit()
 
-Both col() and lit() return a Column object but:
-`col('x')` is a pointer. It says "go find the column named x and read this row's value from it." The value changes on every row.
-`lit(v)` is a constant. It says "the value is v, always." Identical on every row.
+Both col() and lit() return a Column expression but:
+`col('x')` points to a column identifier. It says "go find the column named x and read this row's value from it." The value changes on every row.
+`lit(v)` is a constant. It says "the value is v for all rows in this column, always." Identical on every row.
 
 ```python
 df.withColumn('a', col('Item_Wt'))   # 12.5, 8.3, 19.0 ...
@@ -215,6 +217,19 @@ df.withColumn('b', lit('Item_Wt'))   # "Item_Wt", "Item_Wt" ...
 ```
 
 Functions in `pyspark.sql.functions` that take multiple Column arguments, such as `concat()`, `array()`, `coalesce()`, `greatest()`, interpret bare strings as column names, not literals. Any time you want a literal inside one of these, `lit()` is mandatory.
+
+## Column Methods vs DataFrame Methods
+
+Column methods operate on a column expression and return a column expression. They don't change the DataFrame
+Examples: `cast`, `alias`, `desc`, `asc`, `isNull`, `isin`, `between`, `substr`
+
+DataFrame methods take those expressions and return a new DataFrame.
+`select`, `withColumn`, `filter`, `orderBy`, `groupBy`, `join`, `drop`
+
+```python
+col('Item_Weight').desc()                    # just an expression
+df.orderBy(col('Item_Weight').desc())        # now it does something
+```
 
 ## Type Casting
 
@@ -278,9 +293,9 @@ OR
 ```python
 df.distinct().display()
 ```
-`.distinct()` vs `.dropDuplicates()` — distinct() deduplicates across all columns. dropDuplicates() does the same when called bare, but accepts a subset: df.dropDuplicates(["email"]) keeps one row per email while retaining all the other columns. distinct() can't do that. Which row survives is non-deterministic unless you order first.
+`.distinct()` vs `.dropDuplicates()` — distinct() deduplicates across all columns. dropDuplicates() does the same when called bare, but accepts a list: df.dropDuplicates(["email"]) keeps one row per email while retaining all the other columns. distinct() can't do that. Which row survives is non-deterministic - use window functions for that.
 
-### Scenario 2 - Dro Duplicates based on a subset of columns
+### Scenario 2 - Drop Duplicates based on a subset of columns
 
 ```
 df.dropDuplicates(['Item_Type']).display()
@@ -290,7 +305,7 @@ df.dropDuplicates(['Item_Type']).display()
 
 ### Preparing Data
 
-`spark.createDataFrame(data, schema=None, samplingRatio=None, verifySchema=True)` is the method that turns data already sitting in your Python process into a Spark DataFrame.
+`spark.createDataFrame(data, schema=None, samplingRatio=None, verifySchema=True)` is the method that turns data already sitting in your cell into a Spark DataFrame.
 
 `spark.read.*` reads from external files or tables stored in volumes or cloud storage and converts those into a Spark DataFrame.
 
@@ -301,7 +316,7 @@ Param 4: (verifySchema): Default True. Spark checks every row against your decla
 
 ```python
 data1 = [('Anthony', 1), ('Ethan', 2)]
-schema1 = 'id STRING, name STRING'
+schema1 = 'name STRING, id STRING'
 
 df1 = spark.createDataFrame(data1, schema1)
 
