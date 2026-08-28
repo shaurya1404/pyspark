@@ -136,14 +136,15 @@ from pyspark.sql.functions import *
 df.select(col('item_identifier').alias('item_ID'))
 ```
 
-## Filter
+## Filter/Where
 
 ### Scenario 1
 
+`.filer()` and `.where()` are identical.
 Filter out only those rows which consist of Item Fat Content as 'Regular'
 
 ```python
-df.filter(col('Item_Fat_Content') == 'Regular').display()
+df.where(col('Item_Fat_Content') == 'Regular').display()
 ```
 
 ### Scenario 2
@@ -161,6 +162,8 @@ Filter out rows that are either in Tier 1 or Tier 2 and have an Outlet Size of N
 ```python
 df.filter((col('Outlet_Location_Type').isin('Tier 1', 'Tier 2') & col('Outlet_Size').isNull())).display()
 ```
+
+***Note***: `.isNotNull()` exists too
 
 ## withColumnRenamed
 
@@ -202,7 +205,7 @@ df = df.withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Regul
 ***Note***: If column name already exists in the table (Scenrio 3), we modify a column, otherwise, create a new one
 
 `regexp_replace(column, pattern, replacement)` finds every match of a regex in a string column and swaps it out — applied row by row, returning a new Column.
-It returns a Column, not a DataFrame. It's an expression, so it only means anything inside select(), withColumn(), filter(), etc.
+It returns a Column, not a DataFrame. It's an expression, so it only means anything inside `select()`, `withColumn()`, `filter()`, etc.
 Nothing is mutated — df is unchanged unless you reassign.
 
 ## col() vs lit()
@@ -226,6 +229,8 @@ Examples: `cast`, `alias`, `desc`, `asc`, `isNull`, `isin`, `between`, `substr`
 DataFrame methods take those expressions and return a new DataFrame.
 `select`, `withColumn`, `filter`, `orderBy`, `groupBy`, `join`, `drop`
 
+A column method does nothing on its own. It has to be handed to a DataFrame method.
+
 ```python
 col('Item_Weight').desc()                    # just an expression
 df.orderBy(col('Item_Weight').desc())        # now it does something
@@ -235,7 +240,7 @@ df.orderBy(col('Item_Weight').desc())        # now it does something
 
 Change or clarify a columns data type
 
-`.cast()` is a Column method, not a DataFrame method. It takes one column expression and returns a new column expression whose values are converted to a different data type. `.astype()` and `.cast()` are identical.
+`.cast()` is a Column method. It takes one column expression and returns a new column expression whose values are converted to a different data type. `.astype()` and `.cast()` are identical.
 
 `df.item_weight.cast(StringType())` is just an expression - it won't mutate anything unless:
 
@@ -247,7 +252,7 @@ df = df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
 
 ## Sort/Order By
 
-Analogous to ORDER BY in SQL Queries. `.sort()` and `.orderBy()` are identical methods.
+`.orderBy()` is a DataFrame method. Analogous to ORDER BY in SQL Queries. `.sort()` and `.orderBy()` are identical methods.
 
 1) Scenario 1 - Order by according to Item Weight in descending order
 
@@ -255,15 +260,13 @@ Analogous to ORDER BY in SQL Queries. `.sort()` and `.orderBy()` are identical m
 df.orderBy(col("Item_Weight").desc()).display()
 ```
 
-***Note***: Use .asc() in the same manner
+***Note***: Use `.asc()` in the same manner
 
 2) Scenario 2 - Order by on the basis of (Item_Weight, Item_Visibility) - first in desc and second in asc
 
 ```python
 df.orderBy(col("Item_Weight").desc(), col("Item_Visibility").asc()).display()
 ```
-
-***Note***: `orderBy` returns a new DataFrame. It doesn't directly mutate the original one unless we re-assign `df = df.orderBy(...)`
 
 ## Limit
 
@@ -293,7 +296,7 @@ OR
 ```python
 df.distinct().display()
 ```
-`.distinct()` vs `.dropDuplicates()` — distinct() deduplicates across all columns. dropDuplicates() does the same when called bare, but accepts a list: df.dropDuplicates(["email"]) keeps one row per email while retaining all the other columns. distinct() can't do that. Which row survives is non-deterministic - use window functions for that.
+`.distinct()` vs `.dropDuplicates([cols])` — distinct() deduplicates across all columns. dropDuplicates() does the same when called bare, but accepts a list: df.dropDuplicates(["email"]) keeps one row per email while retaining all the other columns. distinct() can't do that. Which row survives is non-deterministic - use window functions for that.
 
 ### Scenario 2 - Drop Duplicates based on a subset of columns
 
@@ -336,11 +339,14 @@ df1.unionByName(df2).display() # matches columns by NAME
 
 ## String Functions
 
-They return a Column. So, then can be used anywhere where a column expression is expected such as `.select()`, `.withColumn()`, `.groupBy()`,   `.filter()`
+These are Column functions. So, they can be used anywhere where a column expression is expected such as `.select()`, `.withColumn()`, `.groupBy()`,   `.filter()`
+```python
+from pyspark.sql.functions import *
 
-`df.select(upper(col('Item_Type')).alias('name_upper')).display()`
-`df.select(lower(col('Item_Type'))).display()`
-`df.select(initcap('Item_Type')).display()`
+df.select(upper(col('Item_Type')).alias('name_upper')).display()
+df.select(lower(col('Item_Type'))).display()
+df.select(initcap('Item_Type')).display()
+```
 
 ***Note***: initCap() normalizes all the other letters except first letters to lowercase. UNITED states -> United States
 
@@ -361,7 +367,7 @@ df.withColumn('one_week_earlier', date_add('current_date', -7)) # Adding a new c
 ```
 
 ```python
-df = df.withColumn('diff_dates', datediff('one_week_later', 'current_date')) # week_later - current_date = 7 (order matters)
+df = df.withColumn('diff_dates', date_diff('one_week_later', 'current_date')) # week_later - current_date = 7 (order matters)
 ```
 
 ```python
@@ -372,6 +378,8 @@ df = df.withColumn('new_format', date_format('current_date_new', 'dd-MM-yyyy')) 
 
 ### Case 1: Dropping NULLs
 
+Syntax: `dropna(how='any')`
+
 ```python
 df.dropna('all').display() # Drops all rows that have NULL stored in ALL the column values
 ```
@@ -381,7 +389,15 @@ df.dropna('any').display() # Drops all rows that have NULL stored in ANY of the 
 ```
 
 ```python
-df.dropna(subset=['Outlet_Size']).display() # Drops all rows that contain NULL in only the given list of columns
+df.dropna(subset=['Outlet_Size']).display() # Drops all rows that contain NULL only in the given list of columns
+```
+
+```python
+df.dropna(how='any', subset=['Outlet_Size', 'Item_Weight']).display() # Drops all rows that contain NULL in either of the given list of columns
+```
+```python
+df.dropna(subset=["email"])             # dropna is a DF method
+df.where(col("email").isNotNull())     # same result but isNotNull is a Column Method
 ```
 
 ### Case 2: Filling NULLs
@@ -396,7 +412,7 @@ df.fillna('N/A', subset=['Outlet_Size']) # Replace all NULLs for the given list 
 
 ## Split and Array Indexing
 
-`split(str, pattern, limit = -1)` takes a string column and breaks it into an array of strings.
+`split(str, delimiter, limit = -1)` takes a string column and breaks it into an array of strings.
 
 ```python
 df.withColumn('Outlet_Type', split('Outlet_Type', ' ')) # Splits and stores the column values into a list based on the delimiter
@@ -406,7 +422,7 @@ df.withColumn('Outlet_Type', split('Outlet_Type', ' ')) # Splits and stores the 
 df.withColumn('Output_Type', split('Output_Type', ' ')[1]) # Accessing the 1st index value from the list for each row
 ```
 
-***Note***: `limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit:
+***Note***: `limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit: 
 ```python
 split(col("s"), "-", 2)     # "a-b-c-d" -> ["a", "b-c-d"]
 ```
@@ -435,13 +451,14 @@ df_arrcont.display()
 
 `groupBy()` in and of itself is an incomplete, intermediate expression - it does NOT return a DataFrame.
 `groupBy()` is always half of a two-step expression: Group → aggregate
-Everything not grouped on and not aggregated disappears.
 
 ```python
 df.groupBy("dept")                                  # <pyspark.sql.group.GroupedData object at 0x...>
 df.groupBy("dept").count()                          # now it's a DataFrame
 df.groupBy("dept").agg(sum("salary"), avg("age"))   # columns: dept | sum(salary) | avg(age)
 ```
+
+Everything not grouped on and not aggregated disappears.
 
 ### Two Ways to Aggregate
 
@@ -500,11 +517,13 @@ df_new.groupBy('dept').agg(collect_list("name")).display()
 
 `pivot(pivot_col, values=None)` takes a `pivot_column` column whose values are used as headers. `values` is an optional explicit list of which values from `pivot_column` to turn into column headers.
 
-`pivot()` is a method on GroupedData, not on DataFrame. So it can only ever appear in the middle and all three are mandatory.:
-
+`pivot()` is a method on GroupedData, not on DataFrame. So it can only ever appear in the middle and all three are mandatory:
+```python
+df.groupBy(cols).pivot(pivot_col, values).agg(agg_funcs)
 df.groupBy("dept").pivot("year").agg(sum("salary"))
 #  ─────┬─────     ───┬───        ──┬──
 #      rows        columns      cell values
+```
 
 The above is functionally the same as `df.group("dept", "year").agg(sum("salary"))` except that the Pivot version has a cell for each and every row x column value possible - shows NULL in case no values exist for a specific combination.
 
@@ -516,11 +535,14 @@ The above is functionally the same as `df.group("dept", "year").agg(sum("salary"
 
 PySpark's version of CASE WHEN
 
-`when(col("bonus").isNull(), lit(0)).otherwise(col("bonus"))`
-`when(col("type") == "A", col("price") * 0.9).otherwise(col("price"))`
+```python
+when(col("bonus").isNull(), lit(0)).otherwise(col("bonus"))
+when(col("type") == "A", col("price") * 0.9).otherwise(col("price"))
+```
 
 1) Always use parenthesis around each condition when using `&`, `|`, or `~` to combine multiple conditions 
-2) A comparison against null yields null, not false — so the row falls through to the next branch or to otherwise(). Hence, always handle NULLs using isNull()
+2) A comparison against null yields null, not false — so the row falls through to the next branch or to otherwise(). 
+Hence, always handle NULLs using isNull()
 
 ### Scenario 1 - Create a 'veg_flag' column to categorize items as veg or not
 
@@ -536,9 +558,9 @@ df.withColumn('veg_exp_flag', when((col('Item_Type').isNull()) | (col('Item_MRP'
 
 ### Scenario 3 - Using When-Otherwise inside a Aggregate Function
 
+```python
 from pyspark.sql.functions import sum, count
 
-```python
 df.groupBy("dept").agg(
     count("*").alias("total"),
     sum(when(col("status") == "active", lit(1)).otherwise(lit(0))).alias("active_count"),
@@ -553,7 +575,7 @@ Analogous to JOIN in SQL
 ### Inner JOIN
 
 ```python
-df1.join(df2, df1.dept_id == df2.dept_id, 'inner').display()
+df1.join(df2, df1.dept_id == df2.dept_id).display()
 ```
 ### Left/Right JOIN
 
@@ -566,7 +588,7 @@ df1.join(df2, df1.dept_id == df2.dept_id, 'left').display()
 Used to retrieve all the rows that are in the first data frame but NOT in the second
 
 ```python
-df1.join(df2, df1.dept_id == df2.dept_id, 'anti').display() # Displays records in df1 but not in df2
+df1.join(df2, df1.dept_id == df2.dept_id, 'anti').display() # Displays records in df1 but not in df2 - df1 EXCEPT df2
 ```
 
 ## Window Functions
@@ -584,7 +606,7 @@ window_spec = Window.partitionBy("dept").orderBy(col("salary").desc())
 df.withColumn("rn", row_number().over(window_spec))
 ```
 
-`.partitionBy()`: Splits rows into independent groups; numbering restarts in each. If not given, the entire table is one window
+`.partitionBy()`: Splits rows into independent groups; numbering resets in each. If not given, the entire table is one window
 `.orderBy()`: Defines the basis of the sort within each partition. If not given, every row in one window gets the same value
 
 ***Note***: `orderBy()` is mandatory for the three ranking functions.
@@ -731,8 +753,8 @@ df.withColumn("band", categorize_udf(col("salary")))
 
 **Important**: A UDF is a last resort, not a tool of first choice. Native PySpark functions will always be better because:
 
-1) Much better performance since executor nodes run on JVMs. Thus, each row transformation in a UDF must be serialized for the Python interpretor 
-2) UDFs are not optimizable since Spark's optimizer treats a UDF is a black box.
+1) Much better performance since executor nodes run on JVMs. Thus, each row must be sent to a Python worker node, processed, and the result deserialized back for the JVM 
+2) UDFs are not optimizable since Spark's optimizer treats a UDF as a black box.
 
 The example above needs no UDF at all:
 
@@ -772,6 +794,18 @@ Read it back by name: `spark.read.table("workspace.default.employees")`
 `df.write.format('csv').mode("overwrite").save("/Volumes/workspace/default/raw_data/output")` — Writes files to a location.
 Produces a directory of data and meta-data files, not a single file. No catalog entry — you read it back by path.
 
+## DataFrame Write V2 API
+
+The recommended approach for writing Delta tables.
+`df.writeTo()` returns a DataFrame Writer V2 Object. The structural difference from V1: there is no `.mode()` and no `.save()`. The terminal action is the mode, and calling it executes the write.
+
+```python
+df.writeTo("catalog.schema.table").append()
+```
+`.mode('overwrite')` = `.createOrReplace()`
+`.mode('append')` = `.append()`
+
+
 ## Parquet and Columnar Storage
 
 Row-Oriented (CSV, JSON, Avro) store data record by record:
@@ -784,7 +818,7 @@ Column-Oriented (Parquet, ORC) store data column by column:
 1,2,3 | Alice,Bob,Carol | Eng,Sales,Eng | 5000,4000,6000
 └─id─┘ └──── name ─────┘ └─── dept ────┘ └─── salary ───┘
 
-### Why Columnar for data Analytics?
+### Why Columnar for Data Analytics?
 
 1) Read only what you asked for
 
@@ -834,7 +868,7 @@ Spark reads the footer, checks each row group's salary min/max, and skips entire
 
 ***Note***: Delta is not a file format. It's Parquet files plus a transaction log.
 
-## ### Managed vs External Tables
+## Managed vs External Tables
 
 Managed: Unity Catalog owns the data and the metadata.
 External: Unity Catalog owns only the metadata. You own the data.
@@ -857,7 +891,7 @@ SQL: `CREATE TABLE employees LOCATION 'abfss://container@account.dfs.core.window
 
 SQL and the DataFrame API use the same engine. Both are parsed into a logical plan, optimized by Catalyst, and executed identically.
 
-`df.filter(col("salary") > 5000).groupBy("dept").count()`
+`df.filter(col("salary") > 5000).groupBy("dept").count(*)`
 `spark.sql("SELECT dept, COUNT(*) FROM employees WHERE salary > 5000 GROUP BY dept")`
 
 Identical physical plan. Identical performance. The choice is purely about readability, not speed.
