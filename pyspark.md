@@ -56,11 +56,30 @@ spark.read.format('csv').option('header', True).option('inferSchema', True).load
 
 4) `.load(path)` — Execute. Returns the DataFrame.
 
-***Note***: options belong to a format, and the reader silently ignores any that don't apply. `header` and `inferSchema` are CSV options; passing them to a JSON file format read does nothing but also raises no error. Same for a typo'd key.
+5) `.option(optional).json(path)` - Equivalent to `.format(...).load(...)`
+
+6) `.option(optional).csv(path)` - Equivalent to `.format(...).load(...)`
+
+***Note***: `.option()` takes different params for different file types. The reader silently ignores any that don't apply. 
+`header` and `inferSchema` are CSV options; passing them to a JSON file format read does nothing but also raises no error.
 
 - `df.display()` is a Databricks function, not PySpark. It displays the DataFrame as a sorted grid. 
 - `df.show(n, truncate=False)` is a PySpark function, which prints ASCII. 
-- n (optional): No. of rows to show - default = 20; truncate (optional): Truncate strings longer than 20 chars. Default = False
+- n (optional): No. of rows to show (default = 20); truncate (optional): Truncate strings longer than 20 chars (default = False)
+
+### DataFrame Reader API Via JDBC
+
+Java Database Connectivity (JDBC) is a Java standard for JVMs to connect to relational databases.
+
+```python
+df = (spark.read.format('jdbc')
+    .option('url', 'jdbc:sqlserver://gizmobox-dbsrvr.database.windows.net:1433;database=gizmobox-db') # Found in JDBC settings in the external DB
+    .option('dbtable', 'dbo.Refunds')
+    .option('user', 'gizmoboxadmin')
+    .option('password', 'gizmoadm@123')
+    .load() # .load() does not have a path here but is required to execute the operation and return a DataFrame 
+)
+```
 
 ## DDL and StructType
 
@@ -797,7 +816,8 @@ Produces a directory of data and meta-data files, not a single file. No catalog 
 ## DataFrame Write V2 API
 
 The recommended approach for writing Delta tables.
-`df.writeTo()` returns a DataFrame Writer V2 Object. The structural difference from V1: there is no `.mode()` and no `.save()`. The terminal action is the mode, and calling it executes the write.
+`df.writeTo()` returns a DataFrame Writer V2 Object.
+The structural difference from V1: there is no `.mode()` and no `.save()`. The terminal action is the mode, and calling it executes the write.
 
 ```python
 df.writeTo("catalog.schema.table").append()
