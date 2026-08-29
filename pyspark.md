@@ -135,6 +135,17 @@ my_struct_schema = StructType([
 
 ***Note***: You can pass optional paramters in data types of StructType Schema definition such as `DecimalType(10, 2)`
 
+## spark.sql()
+
+`spark.sql()` takes a SQL statement as the arguement and returns a DataFrame
+
+PySpark ad Spark SQL have the same performance cost. So, yields the same execution plan
+
+```python
+spark.sql("SELECT dept, avg(sal) FROM emp GROUP BY dept").explain()
+spark.table("emp").groupBy("dept").agg(avg("sal")).explain()
+```
+
 ## SELECT Statement
 
 Straight forward way of performing SQL Select
