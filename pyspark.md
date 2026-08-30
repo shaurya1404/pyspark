@@ -272,6 +272,16 @@ col('Item_Weight').desc()                    # just an expression
 df.orderBy(col('Item_Weight').desc())        # now it does something
 ```
 
+## Column Methods vs PySpark Functions
+
+Column methods are a short and closed loop. `pyspark.sql.functions` has hundreds of entries. To distinguish between the two:
+
+1) Memorize the commonly used Column Methods
+
+`.isNull()`, `.isNotNull()`, `.isin(...)`, `.between(a, b)`, `.like()`, `.cast()`, `.alias()`, `.desc()`, `.over()`, `.substr()`
+
+2) Column methods are camelCase while Functions are snake_case: `.isNull()` vs `coalesce()`
+
 ## Type Casting
 
 Change or clarify a columns data type
