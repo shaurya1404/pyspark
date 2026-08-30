@@ -81,6 +81,10 @@ df = (spark.read.format('jdbc')
 )
 ```
 
+### spark.read.table()
+
+Both `spark.table('catalog.schema.table')` and `spark.read.table('catalog.schema.table')` take a table name, look it up in the Catalog, and return a DataFrame. The difference is that the former is the short-hand while the latter allows passing `.option()`
+
 ## DDL and StructType
 
 1) DDL
@@ -167,6 +171,8 @@ df.select(col('item_identifier').alias('item_ID'))
 ```
 
 ## Filter/Where
+
+`.filter('')` accepts SQL predicate statements too by passing them enclosed in quotes - `df.filter('customer_id IS NOT NULL')`
 
 ### Scenario 1
 
@@ -442,7 +448,7 @@ df.fillna('N/A', subset=['Outlet_Size']) # Replace all NULLs for the given list 
 
 ## Split and Array Indexing
 
-`split(str, delimiter, limit = -1)` takes a string column and breaks it into an array of strings.
+`split(str, pattern, limit = -1)` takes a string column and breaks it into an array of strings.
 
 ```python
 df.withColumn('Outlet_Type', split('Outlet_Type', ' ')) # Splits and stores the column values into a list based on the delimiter
@@ -452,10 +458,19 @@ df.withColumn('Outlet_Type', split('Outlet_Type', ' ')) # Splits and stores the 
 df.withColumn('Output_Type', split('Output_Type', ' ')[1]) # Accessing the 1st index value from the list for each row
 ```
 
-***Note***: `limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit: 
+`limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit: 
 ```python
 split(col("s"), "-", 2)     # "a-b-c-d" -> ["a", "b-c-d"]
 ```
+
+***Note***: The `pattern` in split() is a regex
+
+### split_part()
+
+`split_part(src, delimiter, partNum)`
+Returns a single string on the basis of the 1-based `partNum` value passed. Unlike `split()`, the `delimiter` is just a simple string literal
+
+***Note***: `split(...)[n]` = `split_part(..., n)`
 
 ### Explode
 
@@ -620,6 +635,7 @@ Used to retrieve all the rows that are in the first data frame but NOT in the se
 ```python
 df1.join(df2, df1.dept_id == df2.dept_id, 'anti').display() # Displays records in df1 but not in df2 - df1 EXCEPT df2
 ```
+***Note***: JOINING without `.select()` will yiled all columns from both the dataframes
 
 ## Window Functions
 
