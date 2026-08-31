@@ -500,7 +500,22 @@ df_arrcont = df.withColumn('type1_flag', array_contains(split('Outlet_Type', ' '
 df_arrcont.display()
 ```
 
-***Note***: Functions like .coalesce() expect Column objects. So, use lit(value) instead of 'value' whenever passing raw Python values to any function by default - worst case, it's just redundant
+***Note***: Functions like `.coalesce()` expect Column objects. So, use lit(value) instead of 'value' whenever passing raw Python values to any function by default - worst case, it's just redundant
+
+### .getItem()
+
+Returns the value from an array/map-typed column based on the index/key passed
+
+```python
+df.select(
+    "id",
+    col("skills").getItem(0).alias("primary_skill"),
+    col("attrs").getItem("city").alias("city"),
+)
+```
+
+***Note***: `col("skills").getItem(0)` is the same as `col("skills")[0]`
+
 
 ## Grouping and Aggregation
 
@@ -551,7 +566,7 @@ df.groupBy("dept").agg(
 `collect_list()` is an aggregate function that gathers every value in a group into a single array.
 Most aggregates reduce many values to one (`sum`, `avg`, `max`). `collect_list()` accumulates — it keeps them all, just repackaged into one array-typed cell.
 
-`collect_set()` also stores all the values for the group in a LIST but removes duplicates
+`collect_set()` also stores all the values for the group in a LIST but removes duplicates. 
 
 ```python
 data1 = [("eng", "alice"),
@@ -567,6 +582,8 @@ df_new = spark.createDataFrame(data1, schema1)
 
 df_new.groupBy('dept').agg(collect_list("name")).display()
 ```
+
+***Note***: With `collect_set()`, the order is NOT preserved. A useful pattern to preserve order: `array_distinct(collect_list(col))`
 
 ### Pivot
 
