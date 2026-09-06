@@ -10,9 +10,9 @@
 
 - Hence, the more optimal solution is Horizontal Scaling - Use 20 not-so-fancy systems in order to process the data by partitioning it into subsets of data. This is exaclty what Spark does.
 
-- Spark is a distributed compute engine which allows processing of big data in a much more manageable and scalable manner. It processes data across multiple machines. It does NOT store data at any point; It's stateless. You point it at files sitting in S3 or a Delta/Iceberg table, it reads them, computes, writes results back out, and forgets everything.
+- Spark is a distributed compute engine which allows processing of big data in a much more efficient and scalable manner. It processes data across multiple machines. It does NOT store data at any point; It's stateless. You point it at files sitting in S3 or a Delta/Iceberg table, it reads them, computes, writes results back out, and forgets everything.
 
-This delineation between storage and processing is what makes it extremely powerful. It means your storage layer (cheap, durable, always-on) and your compute layer (expensive, elastic, spun up on demand) scale independently.
+This seperation between storage and processing is what makes it extremely powerful. It means your storage layer (cheap, durable, always-on) and your compute layer (expensive, elastic, spun up on demand) scale independently.
 
 PySpark is a reference to the Python API that Spark exposes which allows one to write Python in order to use Spark
 
@@ -22,7 +22,7 @@ There are essentially three 'roles' that are running in a Spark application:
 
 1) Driver: It schedules the work. It holds the SparkSession, builds the execution plan, and runs the complete Python script. It exists because you started a job, and it dies when that job finishes.
 
-2) Cluster Manager: It schedule the infrastructure. It is a machine that was running even before the job was created and will continue to run after it's been completed. It has no idea what Spark is. It's a landlord with a pool of machines a portion of which it provides to the Driver based on how much it needs and whether it has the permission to access them.
+2) Cluster Manager: It schedules the infrastructure. It is a machine that was running even before the job was created and will continue to run after it's been completed. It has no idea what Spark is. It's a landlord with a pool of machines a portion of which it provides to the Driver based on how much it needs and whether it has the permission to access them.
 
 3) Executors: The individual worker nodes that are spun up by the Clsuter Manager and given to the Driver to delegate tasks to. The Driver is the Orchestrator. The executor nodes are the ones that actually perform the tasks.
 
@@ -38,7 +38,7 @@ There are essentially three 'roles' that are running in a Spark application:
 
 Operations in Spark can be split into two types: 1. Transformations (select, filter, join, groupBy, withColumn) are LAZY. None of these are executed immediately when they're read. They are all added in the Logical Plan. 2. Actions (show, count, collect, write, take) are EAGER. They force the entire Logtical Plan made up until their line of call to execute.
 
-Spark's Lazy architecture is a feature, not a bug; it allows Spark to create an optimised logical plan of all the Transformations and executes them as effectively as possible only when the script calls an Action. The logical plan allows ther Optimizer to look at the entire pipeline collectively and rewrite it before running any of it.
+Spark's Lazy architecture is a feature, not a bug; it allows Spark to create an optimised logical plan of all the Transformations and executes them as effectively as possible only when the script calls an Action. The logical plan allows the Optimizer to look at the entire pipeline collectively and rewrite it before running any of it.
 
 ## DataFrame Reader API
 
@@ -56,9 +56,9 @@ spark.read.format('csv').option('header', True).option('inferSchema', True).load
 
 4) `.load(path)` — Execute. Returns the DataFrame.
 
-5) `.option(optional).json(path)` - Equivalent to `.format(...).load(...)`
+5) `.option(optional).json(path)` - Equivalent to `.format(...).load(path)`
 
-6) `.option(optional).csv(path)` - Equivalent to `.format(...).load(...)`
+6) `.option(optional).csv(path)` - Equivalent to `.format(...).load(path)`
 
 ***Note***: `.option()` takes different params for different file types. The reader silently ignores any that don't apply. 
 `header` and `inferSchema` are CSV options; passing them to a JSON file format read does nothing but also raises no error.
@@ -141,7 +141,7 @@ my_struct_schema = StructType([
 
 ## spark.sql()
 
-`spark.sql()` takes a SQL statement as the arguement and returns a DataFrame
+`spark.sql()` takes a SQL statement as the argument and returns a DataFrame
 
 PySpark ad Spark SQL have the same performance cost. So, yields the same execution plan
 
@@ -176,7 +176,7 @@ df.select(col('item_identifier').alias('item_ID'))
 
 ### Scenario 1
 
-`.filer()` and `.where()` are identical.
+`.filter()` and `.where()` are identical.
 Filter out only those rows which consist of Item Fat Content as 'Regular'
 
 ```python
@@ -213,7 +213,7 @@ df.withColumnRenamed('item_weight', 'Item_Wt').display()
 ## withColumn
 
 Allows us to add a new column or modify an existing one.
-Syntax: `withColumnRenamed(string, col_exprsn)`
+Syntax: `withColumn(string, col_exprsn)`
 
 ### Scenario 1 - Add a new column 'flag' which has a constant value 'new' for each row
 
@@ -274,13 +274,15 @@ df.orderBy(col('Item_Weight').desc())        # now it does something
 
 ## Column Methods vs PySpark Functions
 
-Column methods are a short and closed loop. `pyspark.sql.functions` has hundreds of entries. To distinguish between the two:
+Column methods are limited and closed loop. `pyspark.sql.functions` has hundreds of entries. To distinguish between the two:
 
 1) Memorize the commonly used Column Methods
 
 `.isNull()`, `.isNotNull()`, `.isin(...)`, `.between(a, b)`, `.like()`, `.cast()`, `.alias()`, `.desc()`, `.over()`, `.substr()`
 
-2) Column methods are camelCase while Functions are snake_case: `.isNull()` vs `coalesce()`
+2) Column methods are camelCase (except `.isin()`) while Functions are snake_case: `.isNull()` vs `coalesce()`
+
+***Note***: There is no equivalent for IS NOT IN in PySpark. Use `~col(...).isin(...)` instead
 
 ## Type Casting
 
@@ -350,6 +352,8 @@ df.distinct().display()
 df.dropDuplicates(['Item_Type']).display()
 ```
 
+***Note***: `.distinct()` is a Dataframe method. To count distinct values of a column for an aggregare function, use `.countDistinct()`
+
 ## Union/Union By Name
 
 ### Preparing Data
@@ -396,12 +400,38 @@ df.select(initcap('Item_Type')).display()
 
 ***Note***: initCap() normalizes all the other letters except first letters to lowercase. UNITED states -> United States
 
+### Split
+
+`split(col, delimiter, limit = -1)` takes a string column and breaks it into an array of strings.
+
+```python
+df.withColumn('Outlet_List', split('Outlet_Type', ' ')) # Splits and stores the column values into a list based on the delimiter
+```
+
+```python
+df.withColumn('Second_Element', split('Output_Type', ' ')[1]) # Accessing the 1st index value from the list for each row
+```
+
+`limit` controls how many pieces it's split into. The last element keeps the remainder unsplit: 
+```python
+split(col("s"), "-", 2)     # "a-b-c-d" -> ["a", "b-c-d"]
+```
+
+***Note***: The `delimiter` in split() is a regexp
+
+### Split Part
+
+`split_part(src, delimiter, partNum)`
+Returns a single string on the basis of the 1-based `partNum` value passed. Unlike `split()`, the `delimiter` is just a simple string literal
+
+***Note***: `split(...)[n]` = `split_part(..., n+1)`
+
+***Note***: `split()` returns an ARRAY. `split_part()` returns a STRING
 
 ## Date Functions
 
 ```python
 df.withColumn('current_date', current_date()) # Adding a new column containing current date for all rows
-
 ```
 
 ```python
@@ -435,15 +465,15 @@ df.dropna('any').display() # Drops all rows that have NULL stored in ANY of the 
 ```
 
 ```python
-df.dropna(subset=['Outlet_Size']).display() # Drops all rows that contain NULL only in the given list of columns
+df.dropna(subset=['Outlet_Size']).display() # Drops all rows that contain NULL in ANY of the list of columns
 ```
 
 ```python
-df.dropna(how='any', subset=['Outlet_Size', 'Item_Weight']).display() # Drops all rows that contain NULL in either of the given list of columns
+df.dropna(how='all', subset=['Outlet_Size', 'Item_Weight']).display() # Drops all rows that contain NULL in both of the columns
 ```
 ```python
-df.dropna(subset=["email"])             # dropna is a DF method
-df.where(col("email").isNotNull())     # same result but isNotNull is a Column Method
+df.dropna(subset=["email"])          # dropna is a DF method
+df.where(col("email").isNotNull())   # same result but isNotNull is a Column Method
 ```
 
 ### Case 2: Filling NULLs
@@ -456,33 +486,7 @@ df.fillna('N/A').display() # Replace all NULLs in the DataFrame (restricted to c
 df.fillna('N/A', subset=['Outlet_Size']) # Replace all NULLs for the given list of column(s)
 ```
 
-## Split and Array Indexing
-
-`split(str, pattern, limit = -1)` takes a string column and breaks it into an array of strings.
-
-```python
-df.withColumn('Outlet_Type', split('Outlet_Type', ' ')) # Splits and stores the column values into a list based on the delimiter
-```
-
-```python
-df.withColumn('Output_Type', split('Output_Type', ' ')[1]) # Accessing the 1st index value from the list for each row
-```
-
-`limit` controls ontrols how many pieces it's split into. The last element keeps the remainder unsplit: 
-```python
-split(col("s"), "-", 2)     # "a-b-c-d" -> ["a", "b-c-d"]
-```
-
-***Note***: The `pattern` in split() is a regex
-
-### split_part()
-
-`split_part(src, delimiter, partNum)`
-Returns a single string on the basis of the 1-based `partNum` value passed. Unlike `split()`, the `delimiter` is just a simple string literal
-
-***Note***: `split(...)[n]` = `split_part(..., n)`
-
-### Explode
+## Explode
 
 `explode(arr)` flattens (explodes) the array vertically - one row per element in the array
 
@@ -491,7 +495,7 @@ df_exp = df.withColumn('Outlet_Type', explode(split('Outlet_Type', ' ')))
 df_exp = display()
 ```
 
-### Array_Contains
+## Array_Contains
 
 `array_contains(arr, val)` tests whether an array column contains a specific value. Returns a Boolean column — one true/false (or null) per row.
 
@@ -516,7 +520,6 @@ df.select(
 
 ***Note***: `col("skills").getItem(0)` is the same as `col("skills")[0]`
 
-
 ## Grouping and Aggregation
 
 `groupBy()` in and of itself is an incomplete, intermediate expression - it does NOT return a DataFrame.
@@ -528,7 +531,7 @@ df.groupBy("dept").count()                          # now it's a DataFrame
 df.groupBy("dept").agg(sum("salary"), avg("age"))   # columns: dept | sum(salary) | avg(age)
 ```
 
-Everything not grouped on and not aggregated disappears.
+Everything not grouped on neither aggregated disappears.
 
 ### Two Ways to Aggregate
 
@@ -545,18 +548,20 @@ df.groupBy("dept").mean("salary")             # alias for avg
 
 2) Using `agg()`
 
-This is the method to use by default because `agg()` lets you mix different functions on different columns and — critically — name the outputs. Without .alias(), you get columns literally named sum(salary).
+This is the method to use by default because `agg()` lets you mix different functions on different columns and, critically, name the outputs. Without .alias(), you get columns literally named sum(salary).
 
 ```python
 df.groupBy("dept").agg(
     count("*").alias("headcount"),
     sum("salary").alias("total_salary"),
     avg("salary").alias("avg_salary"),
-    max("hire_date").alias("newest_hire")
+    max("hire_date").alias("newest_hire"),
+    collect_set("name").alias('employees_name')
 )
 ```
 
-`count("*")` v/s `count("col")`: Former yields rows per group inclusive of NULLs. Latter yields rows per group where value is not null.
+`count("*")`: Count of rows in a group inclusive of NULLs. 
+`count("col")`: Count of rows in a group exclusive of NULLs.
 `countDistinct("col")`: Count of distinct non-null values.
 
 ***Note***: PySpark has no `.having()`. You just call `.filter()`/`.where()` on the DataFrame AFTER `.agg()`. Same method, position in the chain determines the meaning.
@@ -564,18 +569,19 @@ df.groupBy("dept").agg(
 ### Collect List
 
 `collect_list()` is an aggregate function that gathers every value in a group into a single array.
-Most aggregates reduce many values to one (`sum`, `avg`, `max`). `collect_list()` accumulates — it keeps them all, just repackaged into one array-typed cell.
+Most aggregates reduce many values to one (`sum`, `avg`, `max`). `collect_list()` accumulates — it keeps them all, just aggregated into one list.
 
-`collect_set()` also stores all the values for the group in a LIST but removes duplicates. 
+`collect_set()` also stores all the values per group in a LIST but removes duplicates. 
 
 ```python
-data1 = [("eng", "alice"),
-         ("eng", "bob"),
-         ("sales", "cara"),
-         ("eng", "alice"),
-         ("sales", "dave"),
-         ("hr", "eve")
-         ]
+data1 = [
+    ("eng", "alice"),
+    ("eng", "bob"),
+    ("sales", "cara"),
+    ("eng", "alice"),
+    ("sales", "dave"),
+    ("hr", "eve")
+]
 schema1 = 'dept STRING, name STRING'
 
 df_new = spark.createDataFrame(data1, schema1)
@@ -587,14 +593,14 @@ df_new.groupBy('dept').agg(collect_list("name")).display()
 
 ### Pivot
 
-`pivot(pivot_col, values=None)` takes a `pivot_column` column whose values are used as headers. `values` is an optional explicit list of which values from `pivot_column` to turn into column headers.
+`pivot(pivot_col, values)` takes a `pivot_column` column whose values are used as headers. `values` is an optional list of which values from `pivot_col` to turn into column headers.
 
 `pivot()` is a method on GroupedData, not on DataFrame. So it can only ever appear in the middle and all three are mandatory:
 ```python
 df.groupBy(cols).pivot(pivot_col, values).agg(agg_funcs)
 df.groupBy("dept").pivot("year").agg(sum("salary"))
 #  ─────┬─────     ───┬───        ──┬──
-#      rows        columns      cell values
+#     rows         columns      cell values
 ```
 
 The above is functionally the same as `df.group("dept", "year").agg(sum("salary"))` except that the Pivot version has a cell for each and every row x column value possible - shows NULL in case no values exist for a specific combination.
@@ -605,7 +611,7 @@ The above is functionally the same as `df.group("dept", "year").agg(sum("salary"
 
 ## When Otherwise
 
-PySpark's version of CASE WHEN
+PySpark's version of CASE WHEN. Returns a column expression
 
 ```python
 when(col("bonus").isNull(), lit(0)).otherwise(col("bonus"))
@@ -628,7 +634,7 @@ df.withColumn('veg_flag', when(col("Item_Type").isNull(), lit(False)).when(col("
 df.withColumn('veg_exp_flag', when((col('Item_Type').isNull()) | (col('Item_MRP').isNull()), 'Unknown').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') > 100), 'Veg & Expensive').when((col('Item_Type') != lit('Meat')) & (col('Item_MRP') <= 100), 'Veg & Cheap').otherwise('Non-Veg')).display()
 ```
 
-### Scenario 3 - Using When-Otherwise inside a Aggregate Function
+### Scenario 3 - Using When-Otherwise inside an Aggregate Function
 
 ```python
 from pyspark.sql.functions import sum, count
@@ -685,8 +691,7 @@ df.withColumn("rn", row_number().over(window_spec))
 ***Note***: `orderBy()` is mandatory for the three ranking functions.
 
 **Caveat**: `row_number()` is non-deterministic on ties
-
-Solution: Use a tie-breaker column to make ensure that the produced output is the same on reruns
+**Solution**: Use a tie-breaker column to make ensure that the produced output is the same on reruns
 
 ```python
 # fragile
@@ -716,7 +721,7 @@ df_top3.display()
 # Deduplicate on the basis of 'customer_id' while only keeping rows with the most recent 'updated_at' for each customer
 w = Window.partitionBy('customer_id').orderBy('updated_at').desc()
 df_deduped = df.withColumn('deduped', row_number().over(w))
-    .filer(col('deduped') = 1).drop('deduped') # drop() for pure cleanliness - the derived col was just scaffolding
+    .filter(col('deduped') == 1).drop('deduped') # drop() for pure cleanliness - the derived col was just scaffolding
 df_deduped.display()
 ```
 
@@ -858,10 +863,10 @@ Governs what happens when the target already exists.
 `overwrite`:	Replaces everything	
 `ignore`:	    Silently does nothing. No write, no error
 
-### Table vs Path
+### Table vs Path (Volume)
 
 `df.write.format('csv').mode("overwrite").saveAsTable("workspace.default.employees")` - Registers in the Unity Catalog.
-Creates a managed table. The Catalog manages the data lifecycle and storage location. 
+Creates a managed/delta table. The Catalog manages the data lifecycle and storage location. 
 Read it back by name: `spark.read.table("workspace.default.employees")`
 
 `df.write.format('csv').mode("overwrite").save("/Volumes/workspace/default/raw_data/output")` — Writes files to a location.
@@ -936,11 +941,11 @@ Hence, Parquet files are 5–10× smaller than the equivalent CSV.
 
 It's a hybrid, not purely columnar. Data is first cut horizontally into row groups, and columnar layout applies within each row group. This is the design allows each row group to go to a different executor in parallel.
 
-Parquet files also store Min/max statistics per column chunk in the footer. so, for a filter query like:
+Parquet files also store Min/Max statistics per column chunk in the footer. so, for a filter query like:
 `df.filter(col("salary") > 100000)`
 Spark reads the footer, checks each row group's salary min/max, and skips entire row groups whose max is below 100000. 
 
-***Note***: Delta is not a file format. It's Parquet files plus a transaction log.
+***Note***: Delta is not a file format. It's Parquet files + JSON transaction log.
 
 ## Managed vs External Tables
 
@@ -958,7 +963,7 @@ SQL: `CREATE TABLE employees (id INT, name STRING);`
 ***Note***: Path-based access to managed tables isn't supported since it would bypass Unity Catalog's access control. You must use the format `catalog.schema.table`
 
 **Create an External Table**:
-Python: `df.write.option("path", "abfss://.../employees").saveAsTable("...")`
+Python: `df.write.option("path", "abfss://.../employees").saveAsTable("workspace.default.employees")`
 SQL: `CREATE TABLE employees LOCATION 'abfss://container@account.dfs.core.windows.net/data/employees';`
 
 ## Spark SQL
