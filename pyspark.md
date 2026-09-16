@@ -20,7 +20,7 @@ PySpark is a reference to the Python API that Spark exposes which allows one to 
 
 There are essentially three 'roles' that are running in a Spark application:
 
-1) Driver: It schedules the work. It holds the SparkSession, builds the execution plan, and runs the complete Python script. It exists because you started a job, and it dies when that job finishes.
+1) Driver: It schedules the work. It holds the SparkSession, builds the execution plan, and schedules the work among the executors. It exists because you started a job, and it dies when that job finishes.
 
 2) Cluster Manager: It schedules the infrastructure. It is a machine that was running even before the job was created and will continue to run after it's been completed. It has no idea what Spark is. It's a landlord with a pool of machines a portion of which it provides to the Driver based on how much it needs and whether it has the permission to access them.
 
@@ -39,6 +39,11 @@ There are essentially three 'roles' that are running in a Spark application:
 Operations in Spark can be split into two types: 1. Transformations (select, filter, join, groupBy, withColumn) are LAZY. None of these are executed immediately when they're read. They are all added in the Logical Plan. 2. Actions (show, count, collect, write, take) are EAGER. They force the entire Logtical Plan made up until their line of call to execute.
 
 Spark's Lazy architecture is a feature, not a bug; it allows Spark to create an optimised logical plan of all the Transformations and executes them as effectively as possible only when the script calls an Action. The logical plan allows the Optimizer to look at the entire pipeline collectively and rewrite it before running any of it.
+
+- How Spark executes the execution plan:
+1) Job: A complete unit of work triggered by an Action
+2) Stages: A major phase within the execution plan
+3) Tasks: The smallest unit of work - a stage divided into N tasks. Usually, one task per partition - the data processed by a single executor.
 
 ## DataFrame Reader API
 
