@@ -36,14 +36,16 @@ There are essentially three 'roles' that are running in a Spark application:
 
 ## Lazy Evaluation
 
-Operations in Spark can be split into two types: 1. Transformations (select, filter, join, groupBy, withColumn) are LAZY. None of these are executed immediately when they're read. They are all added in the Logical Plan. 2. Actions (show, count, collect, write, take) are EAGER. They force the entire Logtical Plan made up until their line of call to execute.
+Operations in Spark can be split into two types: 
+1. Transformations (select, filter, join, groupBy, withColumn) are LAZY. None of these are executed immediately when they're read. They are all added in the Logical/Execution Plan.
+x2. Actions (show, count, collect, write, take) are EAGER. They force the entire Logical Plan made up until their line of call to execute.
 
 Spark's Lazy architecture is a feature, not a bug; it allows Spark to create an optimised logical plan of all the Transformations and executes them as effectively as possible only when the script calls an Action. The logical plan allows the Optimizer to look at the entire pipeline collectively and rewrite it before running any of it.
 
 - How Spark executes the execution plan:
 1) Job: A complete unit of work triggered by an Action
 2) Stages: A major phase within the execution plan
-3) Tasks: The smallest unit of work - a stage divided into N tasks. Usually, one task per partition - the data processed by a single executor.
+3) Tasks: The smallest unit of work; stage divided into N tasks. Usually, one task per partition - executed by a single core in an executor.
 
 ## DataFrame Reader API
 
@@ -246,7 +248,7 @@ df = df.withColumn('Item_Fat_Content', regexp_replace('Item_Fat_Content', 'Regul
 ***Note***: If column name already exists in the table (Scenrio 3), we modify a column, otherwise, create a new one
 
 `regexp_replace(column, pattern, replacement)` finds every match of a regex in a string column and swaps it out — applied row by row, returning a new Column.
-It returns a Column, not a DataFrame. It's an expression, so it only means anything inside `select()`, `withColumn()`, `filter()`, etc.
+It returns a Column, not a DataFrame. It's a column expression, so it only means anything inside `select()`, `withColumn()`, `filter()`, etc.
 Nothing is mutated — df is unchanged unless you reassign.
 
 ## col() vs lit()
@@ -295,7 +297,7 @@ Change or clarify a columns data type
 
 `.cast()` is a Column method. It takes one column expression and returns a new column expression whose values are converted to a different data type. `.astype()` and `.cast()` are identical.
 
-`df.item_weight.cast(StringType())` is just an expression - it won't mutate anything unless:
+`df.item_weight.cast(StringType())` is just a column expression - it won't mutate anything unless:
 
 ```python
 df = df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
@@ -339,7 +341,7 @@ df.drop('Item_Visibility', 'Item_Type').display()
 
 ## Drop Duplicates
 
-Allows us to get ride of duplicate rows in the DataFrame. Also known as 'dedup-ing' the DataFrame
+Allows us to get rid of duplicate rows in the DataFrame. Also known as 'dedup-ing' the DataFrame
 
 ### Scenario 1 - Drop duplicates based on all columns
 ```python
@@ -476,6 +478,7 @@ df.dropna(subset=['Outlet_Size']).display() # Drops all rows that contain NULL i
 ```python
 df.dropna(how='all', subset=['Outlet_Size', 'Item_Weight']).display() # Drops all rows that contain NULL in both of the columns
 ```
+
 ```python
 df.dropna(subset=["email"])          # dropna is a DF method
 df.where(col("email").isNotNull())   # same result but isNotNull is a Column Method
@@ -673,7 +676,7 @@ Used to retrieve all the rows that are in the first data frame but NOT in the se
 ```python
 df1.join(df2, df1.dept_id == df2.dept_id, 'anti').display() # Displays records in df1 but not in df2 - df1 EXCEPT df2
 ```
-***Note***: JOINING without `.select()` will yiled all columns from both the dataframes
+***Note***: JOINING without `.select()` will yield all columns from both the dataframes
 
 ## Window Functions
 
@@ -860,7 +863,7 @@ The Write is an action. Everything you've chained — filters, joins, window fun
 
 ### The 4 Save Modes
 
-Governs what happens when the target already exists.
+Decides what happens when the target already exists.
 `df.write.mode("overwrite").saveAsTable("...")`
 
 `error`:	    Throws. This is the default.
@@ -908,9 +911,9 @@ Column-Oriented (Parquet, ORC) store data column by column:
 
 `df.agg(sum("salary"))`
 
-**Row Format**: Every byte of every row must be read off disk, then 3 of 4 fields discarded. On a 200-column table where you need 3 columns, you read 100% of the data to use 1.5%.
+**Row Format**: Every byte of every row must be read off disk, then 3 of 4 fields discarded. On a 100-column table where you need 2 columns, you read 100% of the data to use 2%.
 
-**Column Format**: Seek directly to the salary bytes. Read 25% of the file in a 4-column table. On that 200-column table, ~1.5%.
+**Column Format**: Seek directly to the salary bytes. Read 25% of the file in a 4-column table. On that 200-column table, 2%.
 
 Hence, Columnar format improves I/O efficiency ~10-50x
 As a corollary, `SELECT *`throws away Parquet's main advantage. Selecting only needed columns isn't just tidy style — it's a physical optimization.
@@ -959,7 +962,7 @@ External: Unity Catalog owns only the metadata. You own the data.
 
 Dropping a managed table deletes both the metadata and the underlying data files. Dropping an external table removes only the catalog entry; the files remain in cloud storage. Thus, external tables are safer at the cost of auto-optimization.
 
-The difference in how you create them is just whether you specify an external location or not.
+The difference in how you create them is just whether you specify a location or not.
 
 **Create a Managed Table**:
 Python: `df.write.saveAsTable("workspace.default.employees")`
@@ -982,7 +985,7 @@ Identical physical plan. Identical performance. The choice is purely about reada
 
 ### Temp Views and spark.sql()
 
-A temp view is how SQL finds your DataFrame. spark.sql() is how you run SQL in Spark.
+A temp view is how SQL finds your DataFrame. spark.sql() allows Spark SQL commands in PySpark.
 
 If the thing you want to query exists only as a Python DataFrame, SQL has no way to reach it. Thus, we create a temp view of that DataFrame, apply the query, then store the results back into a DataFrame.
 
