@@ -24,7 +24,7 @@ There are essentially three 'roles' that are running in a Spark application:
 
 2) Cluster Manager: It schedules the infrastructure. It is a machine that was running even before the job was created and will continue to run after it's been completed. It has no idea what Spark is. It's a landlord with a pool of machines a portion of which it provides to the Driver based on how much it needs and whether it has the permission to access them.
 
-3) Executors: The individual worker nodes that are spun up by the Clsuter Manager and given to the Driver to delegate tasks to. The Driver is the Orchestrator. The executor nodes are the ones that actually perform the tasks.
+3) Executors: The individual worker nodes that are spun up by the Cluster Manager and given to the Driver to delegate tasks to. The Driver is the Orchestrator. The executor nodes are the ones that actually perform the tasks.
 
 - The relationship between the Driver and Executors is known as a Master-Slave architecture.
 
@@ -57,22 +57,22 @@ spark.read.format('csv').option('header', True).option('inferSchema', True).load
 
 1) `.format(str)` - The data source: csv, json, parquet, delta, text. Defaults to `parquet` if not mentioned.
 
-2) `.option(key, value)` - Configure the reader object by accessing its properties
+2) `.option(key, value)` - Optional. Configure the reader object by accessing its properties
 
 3) `.schema(structType)` - Supply the column names and data types instead of letting Spark infer them
 
 4) `.load(path)` — Execute. Returns the DataFrame.
 
-5) `.option(optional).json(path)` - Equivalent to `.format(...).load(path)`
+5) `.option(key, value).json(path)` OR `.json(path, key=value) ` - Equivalent to `.format(...).load(path)`
 
-6) `.option(optional).csv(path)` - Equivalent to `.format(...).load(path)`
+6) `.option(key, value).csv(path)` - Equivalent to `.format(...).load(path)`
 
 ***Note***: `.option()` takes different params for different file types. The reader silently ignores any that don't apply. 
 `header` and `inferSchema` are CSV options; passing them to a JSON file format read does nothing but also raises no error.
 
 - `df.display()` is a Databricks function, not PySpark. It displays the DataFrame as a sorted grid. 
 - `df.show(n, truncate=False)` is a PySpark function, which prints ASCII. 
-- n (optional): No. of rows to show (default = 20); truncate (optional): Truncate strings longer than 20 chars (default = False)
+- `n` (optional): No. of rows to show (default = 20); `truncate` (optional): Truncate strings longer than 20 chars (default = False)
 
 ### DataFrame Reader API Via JDBC
 
@@ -297,8 +297,6 @@ Change or clarify a columns data type
 
 `.cast()` is a Column method. It takes one column expression and returns a new column expression whose values are converted to a different data type. `.astype()` and `.cast()` are identical.
 
-`df.item_weight.cast(StringType())` is just a column expression - it won't mutate anything unless:
-
 ```python
 df = df.withColumn('Item_Weight', col('Item_Weight').cast(StringType()))
 ```
@@ -355,19 +353,17 @@ df.distinct().display()
 
 ### Scenario 2 - Drop Duplicates based on a subset of columns
 
-```
+```python
 df.dropDuplicates(['Item_Type']).display()
 ```
 
-***Note***: `.distinct()` is a Dataframe method. To count distinct values of a column for an aggregare function, use `.countDistinct()`
+***Note***: `.distinct()` is a Dataframe method. To count distinct values of a column for an aggregate function, use `.countDistinct()`
 
 ## Union/Union By Name
 
 ### Preparing Data
 
 `spark.createDataFrame(data, schema=None, samplingRatio=None, verifySchema=True)` is the method that turns data already sitting in your cell into a Spark DataFrame.
-
-`spark.read.*` reads from external files or tables stored in volumes or cloud storage and converts those into a Spark DataFrame.
 
 Param 1 (data): list of tuples, list of lists, or list of dicts (keys become column names)
 Param 2 (schema): define the column names explicitly along with data type
@@ -561,6 +557,7 @@ This is the method to use by default because `agg()` lets you mix different func
 ```python
 df.groupBy("dept").agg(
     count("*").alias("headcount"),
+    count_distinct("employees_name").alias("unique_names"),
     sum("salary").alias("total_salary"),
     avg("salary").alias("avg_salary"),
     max("hire_date").alias("newest_hire"),
@@ -570,13 +567,13 @@ df.groupBy("dept").agg(
 
 `count("*")`: Count of rows in a group inclusive of NULLs. 
 `count("col")`: Count of rows in a group exclusive of NULLs.
-`countDistinct("col")`: Count of distinct non-null values.
+`count_distinct("col")`: Count of distinct non-null values.
 
 ***Note***: PySpark has no `.having()`. You just call `.filter()`/`.where()` on the DataFrame AFTER `.agg()`. Same method, position in the chain determines the meaning.
 
 ### Collect List
 
-`collect_list()` is an aggregate function that gathers every value in a group into a single array.
+`collect_list()` is an aggregate function that gathers every value in a column into a single array.
 Most aggregates reduce many values to one (`sum`, `avg`, `max`). `collect_list()` accumulates — it keeps them all, just aggregated into one list.
 
 `collect_set()` also stores all the values per group in a LIST but removes duplicates. 
@@ -716,7 +713,7 @@ Window.partitionBy("dept").orderBy(col("salary").desc(), col("emp_id").asc())
 ```python
 
 # Find the top 3 distinct salaries and the respective employees for each department (include ties)
-w = Window.partitionBy('dept_id').orderBy('salary').desc()
+w = Window.partitionBy('dept_id').orderBy(col('salary').desc())
 df_top3 = df.withColumn('top_3', dense_rank().over(w))
     .filter(col('top_3') <= 3).drop('top_3') # drop() for pure cleanliness - the derived col was just scaffolding
 df_top3.display()
@@ -727,7 +724,7 @@ df_top3.display()
 ```python
 
 # Deduplicate on the basis of 'customer_id' while only keeping rows with the most recent 'updated_at' for each customer
-w = Window.partitionBy('customer_id').orderBy('updated_at').desc()
+w = Window.partitionBy('customer_id').orderBy(col('updated_at').desc())
 df_deduped = df.withColumn('deduped', row_number().over(w))
     .filter(col('deduped') == 1).drop('deduped') # drop() for pure cleanliness - the derived col was just scaffolding
 df_deduped.display()
@@ -877,6 +874,9 @@ Decides what happens when the target already exists.
 Creates a managed/delta table. The Catalog manages the data lifecycle and storage location. 
 Read it back by name: `spark.read.table("workspace.default.employees")`
 
+`df.write.format("delta").mode("overwrite").option("path", "abfss://data@myaccount.dfs.core.windows.net/hr/employees").saveAsTable("workspace.default.employees_ext")` - External table: you decide where the data lives.
+Read it back by name: `spark.read.table("workspace.default.employees_ext")`
+
 `df.write.format('csv').mode("overwrite").save("/Volumes/workspace/default/raw_data/output")` — Writes files to a location.
 Produces a directory of data and meta-data files, not a single file. No catalog entry — you read it back by path.
 
@@ -884,7 +884,7 @@ Produces a directory of data and meta-data files, not a single file. No catalog 
 
 The recommended approach for writing Delta tables.
 `df.writeTo()` returns a DataFrame Writer V2 Object.
-The structural difference from V1: there is no `.mode()` and no `.save()`. The terminal action is the mode, and calling it executes the write.
+The structural difference from V1: there is no `.mode()` and no `.saveAsTable()`. The terminal action is the mode, and calling it executes the write.
 
 ```python
 df.writeTo("catalog.schema.table").append()
