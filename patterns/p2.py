@@ -1,7 +1,8 @@
 # DataFrame GroupBy with Aggregation (MEDIUM)
 
 # Problem
-# You are a data analyst on a retail analytics team at Amazon, and the category manager wants to know which products actually drive revenue. From the raw sales transactions, produce one summary row per product.
+# You are a data analyst on a retail analytics team at Amazon, and the category manager wants to know which products actually drive revenue.
+# From the raw sales transactions, produce one summary row per product.
 
 # - For each product, report total_sales as the revenue it generated (the sum of price * quantity across its transactions) rounded to 2 decimal places, avg_price as the average price across its transactions rounded to 2 decimal places, and transaction_count as how many transactions it appeared in.
 # - Rank the products from highest revenue to lowest.
