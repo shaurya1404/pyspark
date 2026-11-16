@@ -16,7 +16,8 @@ from pyspark.sql.window import Window
 def top_three(sales):
     w = Window.partitionBy(F.col('region')).orderBy(F.col('total_revenue').desc())
     return (
-        sales.groupBy('region', 'product_name').agg(F.sum('revenue').alias('total_revenue')).withColumn('region_rank', F.dense_rank().over(w)) \
+        sales.groupBy('region', 'product_name').agg(F.sum('revenue').alias('total_revenue')) \
+            .withColumn('region_rank', F.dense_rank().over(w)) \
             .filter(F.col('region_rank') <= 3) \
             .orderBy('region', 'region_rank')
     )

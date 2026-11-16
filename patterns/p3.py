@@ -29,4 +29,5 @@ def cust_no_orders(customers, orders):
 # | `semi` | Left rows WITH a match                 | Left only        | No |
 # | `anti` | Left rows WITHOUT a match              | Left only        | No |
 
+# semi ≈ `WHERE EXISTS`, anti ≈ `WHERE NOT EXISTS`. Both are filters, not real joins.
 # semi + anti together = the whole left table, with no overlap.
