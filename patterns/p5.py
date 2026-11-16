@@ -20,6 +20,7 @@ from pyspark.sql.window import Window
 
 def stock_change(stock_prices):
     w = Window.partitionBy('stock_symbol').orderBy('trade_date')
+    stock_prices = stock_prices.withColumn('trade_date', F.to_date('trade_date')) # converting 'trade_date' type from string to date via to_date()
     return (
         stock_prices.withColumn('prev_price', F.coalesce(F.lag('closing_price').over(w), F.lit(0))) \
             .withColumn('next_price', F.coalesce(F.lead('closing_price').over(w), F.lit(0))) \
