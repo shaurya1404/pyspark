@@ -19,7 +19,7 @@ def pivot(sales):
     totals = sales.groupBy('region').agg(F.round((F.sum('amount')), 2).alias('grand_total'))
 
     return (
-        wide.join(totals, 'region').orderBy('region').select('region', *[F.col(p).alias(f'{p}_total') for p in products], 'grand_total')
+        wide.join(totals, 'region').select('region', *[F.col(p).alias(f'{p}_total') for p in products], 'grand_total').orderBy('region')
     )
 
 # Note: Prefer always providing an explicit list for the row values of the Pivoted column since otherwise, the engine has to perform a Full-Table-Scan
